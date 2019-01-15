@@ -1,0 +1,9 @@
+[submodule "ArianeeSmartContract"]
+	path = ArianeeSmartContract
+	url = git@github.com:Arianee/ArianeeSmartContract.git
+[submodule "ArianeeToken"]
+	path = ArianeeToken
+	url = git@github.com:Arianee/ArianeeToken.git
+[submodule "ArianeeStore"]
+	path = ArianeeStore
+	url = git@github.com:Arianee/ArianeeStore.git
