@@ -4,12 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "symlink": "node createSymlink.js"
   },
   "dependencies": {
     "@0xcert/ethereum-utils": "^1.0.1",
+    "big-number": "^2.0.0",
     "openzeppelin-solidity": "^1.12.0"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "async": "^2.6.1"
+  }
 }
