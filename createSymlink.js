@@ -2,16 +2,14 @@ const fs = require('fs');
 const async = require('async');
 
 const contracts =[
-				'./ArianeeToken/contracts/Arianee.sol',
-				'./ArianeeToken/contracts/ArianeeBase.sol',
-				'./ArianeeToken/contracts/EIP20.sol',
-				'./ArianeeToken/contracts/EIP20Interface.sol',
-				'./ArianeeStore/contracts/ERC900.sol',
-				'./ArianeeStore/contracts/ERC900BasicStakeContract.sol',
-				'./ArianeeStore/contracts/Migrations.sol',
-				'./ArianeeStore/contracts/Ownable.sol',
-				'./ArianeeStore/contracts/arianeeStore.sol',
-				'./ArianeeSmartContract/contracts/tokens'
+				'../ArianeeToken/contracts/Aria.sol',
+				'../ArianeeToken/contracts/erc20.sol',
+				'../ArianeeStore/contracts/ERC900.sol',
+				'../ArianeeStore/contracts/ERC900BasicStakeContract.sol',
+				'../ArianeeStore/contracts/Migrations.sol',
+				'../ArianeeStore/contracts/Ownable.sol',
+				'../ArianeeStore/contracts/arianeeStore.sol',
+				'../ArianeeSmartContract/contracts/tokens'
 				]
 
 
