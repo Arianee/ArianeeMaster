@@ -4,13 +4,19 @@ const async = require('async');
 const contracts =[
 				'../ArianeeToken/contracts/Aria.sol',
 				'../ArianeeToken/contracts/erc20.sol',
-				'../ArianeeStore/contracts/ERC900.sol',
-				'../ArianeeStore/contracts/ERC900BasicStakeContract.sol',
-				'../ArianeeStore/contracts/Migrations.sol',
+
 				'../ArianeeStore/contracts/Ownable.sol',
 				'../ArianeeStore/contracts/arianeeStore.sol',
-				'../ArianeeSmartContract/contracts/tokens'
-				]
+    			'../ArianeeStore/contracts/ArianeeCreditHistory.sol',
+
+    			'../ArianeeSmartContract/contracts/Migrations.sol',
+    			'../ArianeeSmartContract/contracts/tokens/ArianeeIdentity.sol',
+				'../ArianeeSmartContract/contracts/tokens/ArianeeSmartAsset.sol',
+    			'../ArianeeSmartContract/contracts/tokens/Pausable.sol',
+
+				'../ArianeeMessage/contracts/ArianeeWhitelist.sol'
+
+				];
 
 
 if(!fs.existsSync('./contracts')){

@@ -2,6 +2,7 @@ const ArianeeSmartAsset = artifacts.require('ArianeeSmartAsset');
 const catchRevert = require("./helpers/exceptions.js").catchRevert;
 
 contract("ArianeeSmartAsset", (accounts) => {
+  let smartAsset;
   beforeEach(async () => {
       smartAsset = await ArianeeSmartAsset.new();
     });
@@ -9,7 +10,6 @@ contract("ArianeeSmartAsset", (accounts) => {
   it('should returns correct balanceOf after createFor', async () => {
       //await smartAsset.createFor(accounts[0], "test");
       const count = await smartAsset.balanceOf(accounts[0]);
-      console.log(count);
       assert.equal(count.toNumber(), 1);
     });
 
