@@ -14,7 +14,10 @@ const contracts =[
 				'../ArianeeSmartContract/contracts/tokens/ArianeeSmartAsset.sol',
     			'../ArianeeSmartContract/contracts/tokens/Pausable.sol',
 
-				'../ArianeeMessage/contracts/ArianeeWhitelist.sol'
+				'../ArianeeMessage/contracts/ArianeeWhitelist.sol',
+    			'../ArianeeMessage/contracts/ArianeeMessage.sol',
+
+				'../ArianeeService/contracts/ArianeeService.sol'
 
 				];
 
