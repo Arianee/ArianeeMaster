@@ -7,3 +7,6 @@
 [submodule "ArianeeStore"]
 	path = ArianeeStore
 	url = git@github.com:Arianee/ArianeeStore.git
+[submodule "ArianeeService"]
+	path = ArianeeService
+	url = git@github.com:Arianee/ArianeeService.git
