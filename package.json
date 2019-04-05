@@ -8,9 +8,9 @@
     "symlink": "node createSymlink.js"
   },
   "dependencies": {
-    "@0xcert/ethereum-erc20-contracts": "^1.0.0-rc12",
+    "@0xcert/ethereum-erc20-contracts": "1.0.0-rc12",
     "@0xcert/ethereum-erc721-contracts": "0.0.0-alpha9",
-    "@0xcert/ethereum-utils": "^1.0.1",
+    "@0xcert/ethereum-utils": "1.0.1",
     "@0xcert/ethereum-utils-contracts": "0.0.0-alpha9",
     "big-number": "^2.0.0",
     "openzeppelin-solidity": "^1.12.0",
