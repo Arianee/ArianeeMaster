@@ -4,8 +4,6 @@ const async = require('async');
 const contracts =[
 				'../ArianeeToken/contracts/Aria.sol',
 				'../ArianeeToken/contracts/erc20.sol',
-
-				'../ArianeeStore/contracts/Ownable.sol',
 				'../ArianeeStore/contracts/arianeeStore.sol',
     			'../ArianeeStore/contracts/ArianeeCreditHistory.sol',
 
