@@ -3,28 +3,44 @@ const ArianeeStore = artifacts.require('ArianeeStore');
 const Arianee = artifacts.require('Aria');
 const Whitelist = artifacts.require('ArianeeWhitelist');
 const CreditHistory = artifacts.require('ArianeeCreditHistory');
+const ArianeeIdentity = artifacts.require('ArianeeIdentity');
+
+let smartasset, creditHistory;
+
+const arianeeProjectAddress ="0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1",
+      protocolInfraAddress="0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1",
+      authorizedEchangeAddress="0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1",
+      bouncerAddress="0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1",
+      validatorAddress="0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1";
 
 module.exports = function(deployer) {
-    // deployment steps
-    deployer.deploy(Whitelist).then(()=>{
-        deployer.deploy(CreditHistory).then(()=>{
-            deployer.deploy(Arianee).then(()=>{
-                deployer.deploy(ArianeeSmartAsset, Whitelist.address).then(()=>{
-                    deployer.deploy(ArianeeStore, Arianee.address, ArianeeSmartAsset.address, CreditHistory.address, 10,10,10,10);
+    let whitelistDeploy = deployer.deploy(Whitelist,{gasPrice:1});
+    deployer.deploy(Arianee,{gasPrice:1});
+    deployer.deploy(CreditHistory,{gasPrice:1})
+        .then((instance)=>{
+            creditHistory= instance;
+            return deployer.deploy(ArianeeSmartAsset, Whitelist.address);
+        })
+        .then((instance)=>{
+            smartasset = instance;
+            return deployer.deploy(ArianeeStore, Arianee.address, ArianeeSmartAsset.address, CreditHistory.address, "100000000000000000",10,10,10);
+        })
+        .then((instance)=>{
 
-                    ArianeeSmartAsset.assignAbilities(arianeeStore.address, [1]);
-                    ArianeeStore.setDispatchPercent(10,20,20,40,10);
-                    CreditHistory.setArianeeStoreAddress(arianeeStore.address);
-                    Whitelist.assignAbilities(ArianeeSmartAsset.address,[1]);
+            smartasset.assignAbilities(ArianeeStore.address, [2]);
+            smartasset.setStoreAddress(ArianeeStore.address);
 
-                    console.log("WhiteList : "+Whitelist.address);
-                    console.log("CreditHistory : "+CreditHistory.address);
-                    console.log("Aria : "+Arianee);
-                    console.log("ArianeeSmartAsset : "+ArianeeSmartAsset);
-                    console.log("ArianeeStore : "+ArianeeStore);
+            instance.setArianeeProjectAddress(arianeeProjectAddress);
+            instance.setProtocolInfraAddress(protocolInfraAddress);
+            instance.setAuthorizedExchangeAddress(authorizedEchangeAddress);
+            instance.setDispatchPercent(10,20,20,40,10);
 
-                });
-            });
+            creditHistory.setArianeeStoreAddress(ArianeeStore.address);
+            whitelistDeploy.then((instance)=>{ instance.assignAbilities(ArianeeSmartAsset.address,[2]); })
+
         });
-    });
+
+    deployer.deploy(ArianeeIdentity, bouncerAddress, validatorAddress);
+
 };
+
