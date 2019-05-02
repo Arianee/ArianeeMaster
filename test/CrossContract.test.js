@@ -3,14 +3,12 @@ const ArianeeStore = artifacts.require('ArianeeStore');
 const Arianee = artifacts.require('Aria');
 const Whitelist = artifacts.require('ArianeeWhitelist');
 const CreditHistory = artifacts.require('ArianeeCreditHistory');
-const ArianeeService = artifacts.require('ArianeeService');
-const ArianeeMessage = artifacts.require('ArianeeMessage');
 const catchRevert = require("./helpers/exceptions.js").catchRevert;
 
 const bigNumber = require('big-number');
 
 contract("Cross Contracts", (accounts) => {
-    let smartAsset, aria, store, whitelist, creditHistory, service, message;
+    let smartAsset, aria, store, whitelist, creditHistory;
     beforeEach(async () => {
         whitelist = await Whitelist.new();
         creditHistory = await CreditHistory.new();
@@ -18,9 +16,10 @@ contract("Cross Contracts", (accounts) => {
 
         smartAsset = await ArianeeSmartAsset.new(whitelist.address);
 
-        store = await ArianeeStore.new(aria.address, smartAsset.address, creditHistory.address, 10 ,10 ,10 ,10);
+        store = await ArianeeStore.new(aria.address, smartAsset.address, creditHistory.address, "100000000000000000",10 ,10 ,10);
 
-        smartAsset.assignAbilities(store.address, [1]);
+        smartAsset.assignAbilities(store.address, [2]);
+        smartAsset.setStoreAddress(ArianeeStore.address);
 
         store.setArianeeProjectAddress(accounts[2]);
         store.setProtocolInfraAddress(accounts[3]);
@@ -29,23 +28,21 @@ contract("Cross Contracts", (accounts) => {
 
         creditHistory.setArianeeStoreAddress(store.address);
 
-        whitelist.assignAbilities(smartAsset.address,[1]);
+        whitelist.assignAbilities(smartAsset.address,[2]);
 
     });
 
     it('it should refuse to buy credit if you have not enough arias', async () => {
 
-
         await aria.approve(store.address, 0, {from: accounts[0]});
         await catchRevert(store.buyCredit(0, 1, accounts[0], {from: accounts[0]}));
 
-
-        const credit = await creditHistory.totalCredits(accounts[0], 0);
+        const credit = await creditHistory.balanceOf(accounts[0], 0);
         assert.equal(credit, 0);
     });
 
     it("should send back the good balance", async () => {
-        await aria.approve(store.address, 1000, {from: accounts[0]});
+        await aria.approve(store.address, "1000000000000000000", {from: accounts[0]});
         await store.buyCredit(0, 1, accounts[0]);
         await store.reserveToken(1, accounts[0], {from: accounts[0]});
 
@@ -54,8 +51,8 @@ contract("Cross Contracts", (accounts) => {
     });
 
     it("should dispatch rewards correctly when buy a certificate", async()=>{
-        await aria.transfer(accounts[1],1000, {from:accounts[0]});
-        await aria.approve(store.address, 1000, {from: accounts[1]});
+        await aria.transfer(accounts[1],"1000000000000000000", {from:accounts[0]});
+        await aria.approve(store.address, "1000000000000000000", {from: accounts[1]});
         await store.buyCredit(0,1, accounts[1],{from:accounts[1]});
 
         await store.reserveToken(1, accounts[1],{from: accounts[1]});
@@ -75,12 +72,12 @@ contract("Cross Contracts", (accounts) => {
         const storeBalance = await aria.balanceOf(store.address);
 
         assert.equal(storeBalance, 0);
-        assert.equal(count[1], 900);
-        assert.equal(count[2], 40);
-        assert.equal(count[3], 10);
-        assert.equal(count[4], 20);
-        assert.equal(count[5], 20);
-        assert.equal(count[6], 10);
+        assert.equal(count[1], 0);
+        assert.equal(count[2], 400000000000000000);
+        assert.equal(count[3], 100000000000000000);
+        assert.equal(count[4], 200000000000000000);
+        assert.equal(count[5], 200000000000000000);
+        assert.equal(count[6], 100000000000000000);
 
     });
 
