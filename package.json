@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "symlink": "node createSymlink.js",
-    "lint": "eslint './**/*.js?(x)'"
+    "lint": "eslint './**/*.js?(x)'",
+    "clean": "rm -r build/",
+    "test":"truffle compile --reset; truffle test --network test"
   },
   "dependencies": {
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",

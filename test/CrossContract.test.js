@@ -18,7 +18,7 @@ contract('Cross Contracts', (accounts) => {
 
     store = await ArianeeStore.new(aria.address, smartAsset.address, creditHistory.address, '100000000000000000',10 ,10 ,10);
 
-    smartAsset.assignAbilities(store.address, [2]);
+    smartAsset.grantAbilities(store.address, [2]);
     smartAsset.setStoreAddress(ArianeeStore.address);
 
     store.setArianeeProjectAddress(accounts[2]);
@@ -28,7 +28,7 @@ contract('Cross Contracts', (accounts) => {
 
     creditHistory.setArianeeStoreAddress(store.address);
 
-    whitelist.assignAbilities(smartAsset.address,[2]);
+    whitelist.grantAbilities(smartAsset.address,[2]);
 
   });
 
@@ -56,9 +56,17 @@ contract('Cross Contracts', (accounts) => {
     await store.buyCredit(0,1, accounts[1],{from:accounts[1]});
 
     await store.reserveToken(1, accounts[1],{from: accounts[1]});
-    await store.hydrateToken(1, web3.utils.keccak256('imprint'), 'http://arianee.org', web3.utils.keccak256('encryptedInitialKey'), (Math.floor((Date.now())/1000)+2678400), true, accounts[4], {from:accounts[1]});
 
-    await store.requestToken(1, 'encryptedInitialKey', true, accounts[5], {from:accounts[6]});
+    let account = web3.eth.accounts.create();
+    let tokenId=1;
+    let address = accounts[6];
+    let encoded = web3.utils.keccak256(web3.eth.abi.encodeParameters(['uint', 'address'],[tokenId,address]));
+    let signedMessage = account.sign(encoded, account.address);
+
+
+    await store.hydrateToken(1, web3.utils.keccak256('imprint'), 'http://arianee.org', account.address, (Math.floor((Date.now())/1000)+2678400), true, accounts[4], {from:accounts[1]});
+
+    await store.requestToken(1, signedMessage.messageHash, true, accounts[5], signedMessage.signature, {from:accounts[6]});
 
     let count = [];
     count[0] = await aria.balanceOf(accounts[0]);

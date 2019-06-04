@@ -27,7 +27,7 @@ module.exports = function(deployer) {
     })
     .then((instance)=>{
 
-      smartasset.assignAbilities(ArianeeStore.address, [2]);
+      smartasset.grantAbilities(ArianeeStore.address, [2]);
       smartasset.setStoreAddress(ArianeeStore.address);
 
       instance.setArianeeProjectAddress(arianeeProjectAddress);
@@ -36,7 +36,7 @@ module.exports = function(deployer) {
       instance.setDispatchPercent(10,20,20,40,10);
 
       creditHistory.setArianeeStoreAddress(ArianeeStore.address);
-      whitelistDeploy.then((instance)=>{ instance.assignAbilities(ArianeeSmartAsset.address,[2]); });
+      whitelistDeploy.then((instance)=>{ instance.grantAbilities(ArianeeSmartAsset.address,[2]); });
 
     });
 
