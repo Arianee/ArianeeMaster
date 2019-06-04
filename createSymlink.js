@@ -3,14 +3,15 @@ const async = require('async');
 
 const contracts =[
   '../ArianeeToken/contracts/Aria.sol',
-  '../ArianeeToken/contracts/erc20.sol',
   '../ArianeeStore/contracts/arianeeStore.sol',
   '../ArianeeStore/contracts/ArianeeCreditHistory.sol',
 
   '../ArianeeSmartContract/contracts/Migrations.sol',
-  '../ArianeeIdentity/contracts/ArianeeIdentity.sol',
   '../ArianeeSmartContract/contracts/tokens/ArianeeSmartAsset.sol',
   '../ArianeeSmartContract/contracts/tokens/Pausable.sol',
+  '../ArianeeSmartContract/contracts/tokens/ECDSA.sol',
+
+  '../ArianeeIdentity/contracts/ArianeeIdentity.sol',
 
   '../ArianeeMessage/contracts/ArianeeWhitelist.sol',
   '../ArianeeMessage/contracts/ArianeeMessage.sol',
