@@ -8,7 +8,7 @@ const contracts =[
   '../ArianeeStore/contracts/ArianeeCreditHistory.sol',
 
   '../ArianeeSmartContract/contracts/Migrations.sol',
-  '../ArianeeSmartContract/contracts/tokens/ArianeeIdentity.sol',
+  '../ArianeeIdentity/contracts/ArianeeIdentity.sol',
   '../ArianeeSmartContract/contracts/tokens/ArianeeSmartAsset.sol',
   '../ArianeeSmartContract/contracts/tokens/Pausable.sol',
 
