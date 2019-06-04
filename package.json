@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "symlink": "node createSymlink.js"
+    "symlink": "node createSymlink.js",
+    "lint": "eslint './**/*.js?(x)'"
   },
   "dependencies": {
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",
@@ -16,6 +17,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "async": "^2.6.2"
+    "async": "^2.6.2",
+    "eslint": "^5.16.0"
   }
 }
