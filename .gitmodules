@@ -16,3 +16,6 @@
 [submodule "ArianeeStaking"]
 	path = ArianeeStaking
 	url = git@github.com:Arianee/ArianeeStaking.git
+[submodule "ArianeeIdentity"]
+	path = ArianeeIdentity
+	url = git@github.com:Arianee/ArianeeIdentity.git
