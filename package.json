@@ -8,14 +8,14 @@
     "symlink": "node createSymlink.js"
   },
   "dependencies": {
-    "@0xcert/ethereum-erc20-contracts": "1.0.0-rc12",
-    "@0xcert/ethereum-erc721-contracts": "0.0.0-alpha9",
-    "@0xcert/ethereum-utils-contracts": "0.0.0-alpha9",
+    "@0xcert/ethereum-erc20-contracts": "^1.7.0",
+    "@0xcert/ethereum-erc721-contracts": "^1.7.0",
+    "@0xcert/ethereum-utils-contracts": "^1.7.0",
     "big-number": "^2.0.0"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "async": "^2.6.1"
+    "async": "^2.6.2"
   }
 }
