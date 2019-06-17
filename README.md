@@ -7,15 +7,17 @@ The Arianee Protocol is a free and open-source protocol that provides tools to m
 
 ### Playground
 
-We already deployed some contracts to [Sokol](https://blockscout.com/poa/sokol) network. You can play with them RIGHT NOW. No need to install software.
+A testnet protocol was already deployed to [Sokol](https://blockscout.com/poa/sokol) network. You can play with them RIGHT NOW. No need to install software.
 
 | Contract | Token address 
 |-|-
-| ArianeeIdentity | [0x0f2209881761551edccb1cfbab8fbe044fa97e7c](https://blockscout.com/poa/sokol/address/0x0f2209881761551edccb1cfbab8fbe044fa97e7c/transactions) 
-| ArianeeSmartAsset | [0x7b83908271437c08eac9afba56d7080b8d94038c](https://blockscout.com/poa/sokol/address/0x7b83908271437c08eac9afba56d7080b8d94038c/transactions) 
-| ArianeeAriaToken | [0xae5057bb185fc820219e21bc7382c0de7a42fe86](https://blockscout.com/poa/sokol/address/0xae5057bb185fc820219e21bc7382c0de7a42fe86/transactions) 
-| ArianeeStore | [0x69774e9a4a003b3576e27bb0ba687b4267657604](https://blockscout.com/poa/sokol/address/0x69774e9a4a003b3576e27bb0ba687b4267657604/transactions) 
-
+| ArianeeStore | [0x1cec6e16aca79d36be73ec45acda43cfac647f4c](https://blockscout.com/poa/sokol/address/0x1cec6e16aca79d36be73ec45acda43cfac647f4c/transactions) 
+| ArianeeIdentity | [0x74a13bF9eFcD1845E5A2e932849094585AA3BCF9](https://blockscout.com/poa/sokol/address/0x74a13bF9eFcD1845E5A2e932849094585AA3BCF9/transactions) 
+| ArianeeSmartAsset | [0x512C1FCF401133680f373a386F3f752b98070BC5](https://blockscout.com/poa/sokol/address/0x512C1FCF401133680f373a386F3f752b98070BC5/transactions) 
+| ArianeeAriaToken | [0xB81AFe27c103bcd42f4026CF719AF6D802928765](https://blockscout.com/poa/sokol/address/0xB81AFe27c103bcd42f4026CF719AF6D802928765/transactions) 
+| ArianeeStaking | [0x3a125be5bb8a3e1c171947c384795b4a488b74a0](https://blockscout.com/poa/sokol/address/0x3a125be5bb8a3e1c171947c384795b4a488b74a0/transactions) 
+| ArianeeCreditHistory | [0x9C868D9bf85CA649f219204D16d99A240cB1F011](https://blockscout.com/poa/sokol/address/0x9C868D9bf85CA649f219204D16d99A240cB1F011/transactions) 
+| ArianeeWhiteList | [0x3579669219DC20Aa79E74eEFD5fB2EcB0CE5fE0D](https://blockscout.com/poa/sokol/address/0x3579669219DC20Aa79E74eEFD5fB2EcB0CE5fE0D/transactions)
 
 To learn more about the Arianee Protocol, and Arianee news, please refer to:
 * [The Arianee protocol documentation](coming soon).
