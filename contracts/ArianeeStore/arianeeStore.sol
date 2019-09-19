@@ -31,11 +31,12 @@ contract ArianeeCreditHistory {
 }
 
 /**
- * @title Interface to interact with ArianeeService
+ * @title Interface to interact with ArianeeEvent
  */
- contract ArianeeService{
-     function createService(uint256 _tokenId, bytes32 _hash, bytes memory _signature, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public returns(uint256);
-     function acceptService(uint256 _tokenId, uint256 _serviceId, address _owner) public returns(uint256);
+ contract ArianeeEvent{
+     function create(uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public returns(uint256);
+     function accept(uint256 _eventId, address _owner) public returns(uint256);
+     function refuse(uint256 _eventId, address _owner) public returns(uint256);
  }
 
 
@@ -56,7 +57,7 @@ contract ArianeeStore is Pausable {
     ERC20Interface public acceptedToken;
     ERC721Interface public nonFungibleRegistry;
     ArianeeCreditHistory public creditHistory;
-    ArianeeService public service;
+    ArianeeEvent public arianeeEvent;
 
     /**
      * @dev Mapping of the credit price in $cent.
@@ -124,7 +125,7 @@ contract ArianeeStore is Pausable {
         ERC20 _acceptedToken,
         ERC721 _nonFungibleRegistry,
         address _creditHistoryAddress,
-        address _arianeeService,
+        address _arianeeEvent,
         uint256 _ariaUSDExchange,
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
@@ -136,7 +137,7 @@ contract ArianeeStore is Pausable {
         acceptedToken = ERC20Interface(address(_acceptedToken));
         nonFungibleRegistry = ERC721Interface(address(_nonFungibleRegistry));
         creditHistory = ArianeeCreditHistory(address(_creditHistoryAddress));
-        service = ArianeeService(address(_arianeeService));
+        arianeeEvent = ArianeeEvent(address(_arianeeEvent));
 
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
@@ -321,25 +322,34 @@ contract ArianeeStore is Pausable {
     }
     
     /**
-     * @notice Create a service and spend a service credit.
-     * @param _tokenId ID concerned by the service.
+     * @notice Create an event and spend an event credit.
+     * @param _tokenId ID concerned by the event.
      * @param _imprint Proof of the certification.
      * @param _uri URI of the JSON certification.
      */
-    function createService(uint256 _tokenId, bytes32 _hash, bytes calldata _signature, bytes32 _imprint, string calldata _uri, address _providerBrand) external{
+    function createEvent(uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external{
         uint256 _rewards = _spendSmartAssetsCreditFunction(1, 1);
-        service.createService(_tokenId, _hash, _signature, _imprint, _uri, _rewards, msg.sender);
+        arianeeEvent.create(_tokenId, _imprint, _uri, _rewards, msg.sender);
         _dispatchRewardsAtHydrate(_providerBrand, _rewards);
     }
     
     /**
-     * @notice Owner accept a service.
-     * @param _tokenId ID concerned by the service.
-     * @param _serviceId service accepted.
+     * @notice Owner accept an event.
+     * @param _eventId event accepted.
      * @param _providerOwner address of the provider of the interface.
      */
-    function acceptService(uint256 _tokenId, uint256 _serviceId, address _providerOwner) external{
-        uint256 _rewards = service.acceptService(_tokenId, _serviceId, msg.sender);
+    function acceptEvent(uint256 _eventId, address _providerOwner) external{
+        uint256 _rewards = arianeeEvent.accept(_eventId, msg.sender);
+        _dispatchRewardsAtRequest(_providerOwner, _rewards);
+    }
+    
+    /**
+     * @notice Owner refuse an event.
+     * @param _eventId event accepted.
+     * @param _providerOwner address of the provider of the interface.
+     */
+    function refuseEvent(uint256 _eventId, address _providerOwner) external{
+        uint256 _rewards = arianeeEvent.refuse(_eventId, msg.sender);
         _dispatchRewardsAtRequest(_providerOwner, _rewards);
     }
     
