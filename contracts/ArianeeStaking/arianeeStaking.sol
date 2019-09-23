@@ -7,7 +7,7 @@ import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 import "./ERC900.sol";
 import "./Pausable.sol";
 
-contract ArianeeStore{
+contract iArianeeStore{
      function ariaUSDExchange() public view returns(uint256 _ariaUSDExchange);
 }
 
@@ -22,7 +22,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @notice Interface for all the connected contracts.
    */
   ERC20 public stakingToken;
-  ArianeeStore public store;
+  iArianeeStore public store;
   
   /**
    * @dev fees if stake unlocked by owner. 
@@ -99,7 +99,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    */
   constructor(ERC20 _stakingToken, address _arianeeStoreAdress) public {
     stakingToken = _stakingToken;
-    store = ArianeeStore(address(_arianeeStoreAdress));
+    store = iArianeeStore(address(_arianeeStoreAdress));
   }
   
   /**
@@ -107,7 +107,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @param _storeAddress new address of the store.
    */
   function setStoreAddress(address _storeAddress) external onlyOwner(){
-    store = ArianeeStore(address(_storeAddress));
+    store = iArianeeStore(address(_storeAddress));
     emit SetAddress("storeAddress", _storeAddress);
   }
 

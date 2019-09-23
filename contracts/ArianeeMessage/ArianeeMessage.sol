@@ -2,7 +2,7 @@ pragma solidity 0.5.6;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 
-contract ArianeeWhitelist{
+contract iArianeeWhitelist{
     function isAuthorized(uint256 _tokenId, address _sender, address _tokenOwner) public view returns(bool);
 }
 
@@ -16,7 +16,7 @@ contract ArianeeMessage is Ownable{
     mapping(uint256 => Message[]) public messageList;
     mapping(uint256 => uint256[]) rewards;
     
-    ArianeeWhitelist whitelist;
+    iArianeeWhitelist whitelist;
     ERC721Interface smartAsset;
     address arianeeStoreAddress;
     
@@ -28,7 +28,7 @@ contract ArianeeMessage is Ownable{
     }
     
     constructor(address _whitelistAddress, address _smartAssetAddress, address _arianeeStoreAddress) public{
-        whitelist = ArianeeWhitelist(address(_whitelistAddress));
+        whitelist = iArianeeWhitelist(address(_whitelistAddress));
         smartAsset = ERC721Interface(address(_smartAssetAddress));
         arianeeStoreAddress = _arianeeStoreAddress;
     }

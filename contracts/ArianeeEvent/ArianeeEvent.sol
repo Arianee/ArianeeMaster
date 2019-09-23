@@ -10,7 +10,7 @@ contract ERC721Interface {
     function tokenCreation(uint256 _tokenId) external view returns(uint256);
 }
 
-contract ArianeeWhitelist {
+contract iArianeeWhitelist {
     function addWhitelistedAddress(uint256 _tokenId, address _address) public;
 }
 
@@ -20,7 +20,7 @@ Ownable{
     using SafeMath for uint256;
     
     address arianeeStoreAddress;
-    ArianeeWhitelist arianeeWhitelist;
+    iArianeeWhitelist arianeeWhitelist;
     ERC721Interface smartAsset;
     
     uint256 eventDestroyDelay = 7776000;
@@ -80,7 +80,7 @@ Ownable{
     
     
     constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) public{
-        arianeeWhitelist = ArianeeWhitelist(address(_arianeeWhitelistAddress));
+        arianeeWhitelist = iArianeeWhitelist(address(_arianeeWhitelistAddress));
         smartAsset = ERC721Interface(address(_smartAssetAddress));
         
         events.push(Event({

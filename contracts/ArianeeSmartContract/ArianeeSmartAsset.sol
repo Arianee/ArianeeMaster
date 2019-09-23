@@ -1,11 +1,11 @@
 pragma solidity 0.5.6;
 
-contract ArianeeWhitelist {
+contract iArianeeWhitelist {
   function addWhitelistedAddress(uint256 _tokenId, address _address) external;
 }
 
 
-contract ArianeeStore{
+contract iArianeeStore{
     function canTransfer(address _to,address _from,uint256 _tokenId) external returns(bool);
     function canDestroy(uint256 _tokenId, address _sender) external returns(bool);
 }
@@ -83,8 +83,8 @@ Pausable
   /**
    * Interface for all the connected contracts.
    */
-  ArianeeWhitelist public arianeeWhitelist;
-  ArianeeStore public store;
+  iArianeeWhitelist public arianeeWhitelist;
+  iArianeeStore public store;
 
   /**
    * @dev This emits when a token is hydrated.
@@ -161,7 +161,7 @@ Pausable
    * @param _storeAddress new address of the store.
    */
   function setStoreAddress(address _storeAddress) external onlyOwner(){
-    store = ArianeeStore(address(_storeAddress));
+    store = iArianeeStore(address(_storeAddress));
     emit SetAddress("storeAddress", _storeAddress);
   }
   
@@ -431,7 +431,7 @@ Pausable
    * @param _whitelistAddres new address of the whitelist.
    */
   function setWhitelistAddress(address _whitelistAddres) public onlyOwner(){
-    arianeeWhitelist = ArianeeWhitelist(address(_whitelistAddres));
+    arianeeWhitelist = iArianeeWhitelist(address(_whitelistAddres));
     emit SetAddress("whitelistAddress", _whitelistAddres);
   }
 

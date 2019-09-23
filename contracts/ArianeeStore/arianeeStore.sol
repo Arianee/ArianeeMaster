@@ -24,7 +24,7 @@ contract ERC721Interface {
 /**
  * @title Interface to interact with ArianneCreditHistory
  */
-contract ArianeeCreditHistory {
+contract iArianeeCreditHistory {
     function addCreditHistory(address _spender, uint256 _price, uint256 _quantity, uint256 _type) external;
     function consumeCredits(address _spender, uint256 _type, uint256 _quantity) external returns(uint256);
     function arianeeStoreAddress() external returns(address);
@@ -33,7 +33,7 @@ contract ArianeeCreditHistory {
 /**
  * @title Interface to interact with ArianeeEvent
  */
- contract ArianeeEvent{
+ contract iArianeeEvent{
      function create(uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public returns(uint256);
      function accept(uint256 _eventId, address _owner) public returns(uint256);
      function refuse(uint256 _eventId, address _owner) public returns(uint256);
@@ -56,8 +56,8 @@ contract ArianeeStore is Pausable {
      */
     ERC20Interface public acceptedToken;
     ERC721Interface public nonFungibleRegistry;
-    ArianeeCreditHistory public creditHistory;
-    ArianeeEvent public arianeeEvent;
+    iArianeeCreditHistory public creditHistory;
+    iArianeeEvent public arianeeEvent;
 
     /**
      * @dev Mapping of the credit price in $cent.
@@ -136,8 +136,8 @@ contract ArianeeStore is Pausable {
     {
         acceptedToken = ERC20Interface(address(_acceptedToken));
         nonFungibleRegistry = ERC721Interface(address(_nonFungibleRegistry));
-        creditHistory = ArianeeCreditHistory(address(_creditHistoryAddress));
-        arianeeEvent = ArianeeEvent(address(_arianeeEvent));
+        creditHistory = iArianeeCreditHistory(address(_creditHistoryAddress));
+        arianeeEvent = iArianeeEvent(address(_arianeeEvent));
 
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
