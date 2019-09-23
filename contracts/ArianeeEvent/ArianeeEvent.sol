@@ -7,6 +7,7 @@ contract ERC721Interface {
     function canOperate(uint256 _tokenId, address _operator) public returns(bool);
     function isTokenValid(uint256 _tokenId, bytes32 _hash, uint256 _tokenType, bytes memory _signature) public view returns (bool);
     function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer);
+    function tokenCreation(uint256 _tokenId) external view returns(uint256);
 }
 
 contract ArianeeWhitelist {
@@ -110,6 +111,7 @@ Ownable{
      * @return the id of the service.
      */
     function create(uint256 _tokenId, bytes32 _imprint, string calldata _uri, uint256 _reward, address _provider) external onlyStore() returns(uint256){
+        require(smartAsset.tokenCreation(_tokenId)>0);
         
         Event memory _event = Event({
             URI : _uri,
@@ -117,7 +119,6 @@ Ownable{
             provider : _provider,
             destroyLimitTimestamp : eventDestroyDelay.add(block.timestamp)
         });
-        
         
         uint256 _eventId = events.push(_event);
         _eventId = _eventId - 1;
