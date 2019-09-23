@@ -78,7 +78,7 @@ contract ArianeeStore is Pausable {
      * @dev % of rewards dispatch.
      */
     mapping (uint8=>uint8) internal dispatchPercent;
-    
+
     /**
      * @dev Address needed in contract execution.
      */
@@ -328,7 +328,7 @@ contract ArianeeStore is Pausable {
      * @param _uri URI of the JSON certification.
      */
     function createEvent(uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external{
-        uint256 _rewards = _spendSmartAssetsCreditFunction(1, 1);
+        uint256 _rewards = _spendSmartAssetsCreditFunction(2, 1);
         arianeeEvent.create(_tokenId, _imprint, _uri, _rewards, msg.sender);
         _dispatchRewardsAtHydrate(_providerBrand, _rewards);
     }
