@@ -34,7 +34,7 @@ contract iArianeeCreditHistory {
  * @title Interface to interact with ArianeeEvent
  */
  contract iArianeeEvent{
-     function create(uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public returns(uint256);
+     function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public;
      function accept(uint256 _eventId, address _owner) public returns(uint256);
      function refuse(uint256 _eventId, address _owner) public returns(uint256);
  }
@@ -327,9 +327,9 @@ contract ArianeeStore is Pausable {
      * @param _imprint Proof of the certification.
      * @param _uri URI of the JSON certification.
      */
-    function createEvent(uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external{
+    function createEvent(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external whenNotPaused(){
         uint256 _rewards = _spendSmartAssetsCreditFunction(2, 1);
-        arianeeEvent.create(_tokenId, _imprint, _uri, _rewards, msg.sender);
+        arianeeEvent.create(_eventId, _tokenId, _imprint, _uri, _rewards, msg.sender);
         _dispatchRewardsAtHydrate(_providerBrand, _rewards);
     }
     
@@ -338,7 +338,7 @@ contract ArianeeStore is Pausable {
      * @param _eventId event accepted.
      * @param _providerOwner address of the provider of the interface.
      */
-    function acceptEvent(uint256 _eventId, address _providerOwner) external{
+    function acceptEvent(uint256 _eventId, address _providerOwner) external whenNotPaused() {
         uint256 _rewards = arianeeEvent.accept(_eventId, msg.sender);
         _dispatchRewardsAtRequest(_providerOwner, _rewards);
     }

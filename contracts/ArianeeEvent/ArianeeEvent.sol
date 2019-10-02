@@ -2,6 +2,7 @@ pragma solidity 0.5.6;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
+import "./Pausable.sol";
 
 contract ERC721Interface {
     function canOperate(uint256 _tokenId, address _operator) public returns(bool);
@@ -15,7 +16,7 @@ contract iArianeeWhitelist {
 }
 
 contract ArianeeEvent is
-Ownable{
+Ownable, Pausable{
     
     using SafeMath for uint256;
     
@@ -33,9 +34,6 @@ Ownable{
     /// Mapping from tokenid to pending events
     mapping(uint256 => uint256[]) public pendingEvents;
     
-    /// Mapping form tokenid to nb pending events
-    mapping(uint256 => uint256) public pendingEventsLength;
-    
     /// Mapping from event ID to its index in the pending events list
     mapping(uint256 => uint256) public idToPendingEvents;
     
@@ -46,7 +44,8 @@ Ownable{
     mapping(uint256 => bool) destroyRequest;
     
     /// Event list    
-    Event[] public events;
+    mapping(uint256 => Event) internal events;
+    //Event[] public events;
     
     struct Event{
         string URI;
@@ -55,26 +54,26 @@ Ownable{
         uint destroyLimitTimestamp;
     }
     
-    event EventCreated(uint256 _tokenId, uint256 _eventId, bytes32 _imprint, string _uri);
-    event EventAccepted(uint256 _eventId, address _sender);
-    event EventRefused(uint256 _eventId, address _sender);
-    event EventDestroyed(uint256 _eventId);
-    event DestroyRequestUpdated(uint256 _eventId, bool _active);
+    event EventCreated(uint256 indexed _tokenId, uint256 indexed _eventId, bytes32 indexed _imprint, string _uri, address _provider);
+    event EventAccepted(uint256 indexed _eventId, address indexed _sender);
+    event EventRefused(uint256 indexed _eventId, address indexed _sender);
+    event EventDestroyed(uint256 indexed _eventId);
+    event DestroyRequestUpdated(uint256 indexed _eventId, bool _active);
     event EventDestroyDelayUpdated(uint256 _newDelay);
     
     modifier onlyStore(){
-        require(msg.sender == arianeeStoreAddress);
+        //require(msg.sender == arianeeStoreAddress);
         _;
     }
     
     modifier canOperate(uint256 _eventId,address _operator){
-        uint256 _tokenId = eventIdToToken[_eventId];
-        require(smartAsset.canOperate(_tokenId, _operator) || smartAsset.issuerOf(_tokenId) == _operator);
+        //uint256 _tokenId = eventIdToToken[_eventId];
+        //require(smartAsset.canOperate(_tokenId, _operator) || smartAsset.issuerOf(_tokenId) == _operator);
         _;
     }
     
     modifier isProvider(uint256 _eventId) {
-        require(msg.sender == events[_eventId].provider);
+        //require(msg.sender == events[_eventId].provider);
         _;
     }
     
@@ -82,13 +81,6 @@ Ownable{
     constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) public{
         arianeeWhitelist = iArianeeWhitelist(address(_arianeeWhitelistAddress));
         smartAsset = ERC721Interface(address(_smartAssetAddress));
-        
-        events.push(Event({
-            URI: "null",
-            imprint: bytes32(0),
-            provider: address(0),
-            destroyLimitTimestamp:0
-        }));
     }
     
     /**
@@ -110,8 +102,9 @@ Ownable{
      * @param _provider address of the event provider.
      * @return the id of the service.
      */
-    function create(uint256 _tokenId, bytes32 _imprint, string calldata _uri, uint256 _reward, address _provider) external onlyStore() returns(uint256){
+    function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, uint256 _reward, address _provider) external onlyStore() whenNotPaused() {
         require(smartAsset.tokenCreation(_tokenId)>0);
+        require(events[_eventId].provider == address(0));
         
         Event memory _event = Event({
             URI : _uri,
@@ -120,19 +113,16 @@ Ownable{
             destroyLimitTimestamp : eventDestroyDelay.add(block.timestamp)
         });
         
-        uint256 _eventId = events.push(_event);
-        _eventId = _eventId - 1;
+        events[_eventId] = _event;
         
         uint256 length = pendingEvents[_tokenId].push(_eventId);
-        idToPendingEvents[_eventId] = length;
-        pendingEventsLength[_tokenId]++;
+        idToPendingEvents[_eventId] = length - 1; 
         
         eventIdToToken[_eventId] = _tokenId;
         
         rewards[_eventId]= _reward;
         
-        emit EventCreated(_tokenId, _eventId, _imprint, _uri);
-        return _eventId;
+        emit EventCreated(_tokenId, _eventId, _imprint, _uri, _provider);
     }
     
     /**
@@ -140,25 +130,23 @@ Ownable{
      * @notice can only be called through the store by an operator of the NFT.
      * @param _eventId id of the service.
      */
-    function accept(uint256 _eventId, address _sender) external onlyStore() canOperate(_eventId, _sender) returns(uint256){
+    function accept(uint256 _eventId, address _sender) external onlyStore() canOperate(_eventId, _sender) whenNotPaused() returns(uint256){
         
         uint256 _tokenId = eventIdToToken[_eventId];
         uint256 pendingEventToRemoveIndex = idToPendingEvents[_eventId];
-        uint256 lastPendingIndex = pendingEvents[_tokenId].length;
+        uint256 lastPendingIndex = pendingEvents[_tokenId].length - 1;
         
         if(lastPendingIndex != pendingEventToRemoveIndex){
             uint256 lastPendingEvent = pendingEvents[_tokenId][lastPendingIndex];
             pendingEvents[_tokenId][pendingEventToRemoveIndex]=lastPendingEvent;
-            idToPendingEvents[lastPendingIndex] = pendingEventToRemoveIndex;
+            idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
         }
         
-        delete idToPendingEvents[_eventId];
         pendingEvents[_tokenId].length--;
-        
-        pendingEventsLength[_tokenId]--;
+        delete idToPendingEvents[_eventId];
         
         uint256 length = tokenEventsList[_tokenId].push(_eventId);
-        idToTokenEventIndex[_tokenId] = length;
+        idToTokenEventIndex[_eventId] = length - 1;
         
         arianeeWhitelist.addWhitelistedAddress(_tokenId, events[_eventId].provider);
         uint256 reward = rewards[_eventId];
@@ -173,61 +161,93 @@ Ownable{
      * @notice can only be called through the store by an operator of the NFT.
      * @param _eventId id of the service.
      */
-    function refuse(uint256 _eventId, address _sender) external onlyStore() canOperate(_eventId, _sender) returns(uint256){
-        _destroy(_eventId);
+    function refuse(uint256 _eventId, address _sender) external onlyStore() canOperate(_eventId, _sender) whenNotPaused() returns(uint256){
+        _destroyPending(_eventId);
         uint256 reward = rewards[_eventId];
         delete rewards[_eventId];
         emit EventRefused(_eventId, _sender);
+        
         return reward;
     }
     
-    function destroy(uint256 _eventId) external isProvider(_eventId){
+    function destroy(uint256 _eventId) external isProvider(_eventId) whenNotPaused(){
         require(block.timestamp < events[_eventId].destroyLimitTimestamp);
+        require(idToPendingEvents[_eventId] == 0);
         _destroy(_eventId);
     }
     
-    function updateDestroyRequest(uint256 _eventId, bool _active) external isProvider(_eventId){
+    function updateDestroyRequest(uint256 _eventId, bool _active) external isProvider(_eventId) whenNotPaused() {
+        require(idToPendingEvents[_eventId] == 0);
         destroyRequest[_eventId] = _active;
         emit DestroyRequestUpdated(_eventId, _active);
     }
 
-    function validDestroyRequest(uint256 _eventId) external onlyOwner(){
+    function validDestroyRequest(uint256 _eventId) external onlyOwner() whenNotPaused() {
         require(destroyRequest[_eventId] == true);
         destroyRequest[_eventId] = false;
         _destroy(_eventId);
     }
     
-    function updateEventDestroyDelay(uint256 _newDelay) external onlyOwner(){
+    function updateEventDestroyDelay(uint256 _newDelay) external onlyOwner() whenNotPaused() {
         eventDestroyDelay = _newDelay;
         emit EventDestroyDelayUpdated(_newDelay);
     }
     
+    function getEvent(uint256 _eventId) public view returns(string memory, bytes32, address, uint){
+        require(events[_eventId].provider != address(0));
+        return (events[_eventId].URI, events[_eventId].imprint, events[_eventId].provider, events[_eventId].destroyLimitTimestamp);
+    }
     
     function _destroy(uint256 _eventId) internal{
         
         uint256 _tokenId = eventIdToToken[_eventId];
         
         uint256 eventIdToRemove = idToTokenEventIndex[_eventId];
-        uint256 lastEventId = tokenEventsList[_tokenId].length;
+        uint256 lastEventId = tokenEventsList[_tokenId].length - 1;
         
         if(eventIdToRemove != lastEventId){
             uint256 lastEvent = tokenEventsList[_tokenId][lastEventId];
             tokenEventsList[_tokenId][eventIdToRemove] = lastEvent;
-            idToTokenEventIndex[lastEventId] = eventIdToRemove;
+            idToTokenEventIndex[lastEvent] = eventIdToRemove;
         }
         
         tokenEventsList[_tokenId].length--;
-        pendingEventsLength[_tokenId]--;
         delete idToTokenEventIndex[_eventId];
         delete eventIdToToken[_eventId];
-        events[_eventId] = Event({
-            URI: "null",
-            imprint: bytes32(0),
-            provider: address(0),
-            destroyLimitTimestamp:0
-        });
+        delete events[_eventId];
+        
         emit EventDestroyed(_eventId);
 
+    }
+    
+    function _destroyPending(uint256 _eventId) internal{
+        
+        uint256 _tokenId = eventIdToToken[_eventId];
+        uint256 pendingEventToRemoveIndex = idToPendingEvents[_eventId];
+        uint256 lastPendingIndex = pendingEvents[_tokenId].length - 1;
+        
+        if(lastPendingIndex != pendingEventToRemoveIndex){
+            uint256 lastPendingEvent = pendingEvents[_tokenId][lastPendingIndex];
+            pendingEvents[_tokenId][pendingEventToRemoveIndex]=lastPendingEvent;
+            idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
+        }
+        
+        pendingEvents[_tokenId].length--;
+        
+        delete idToPendingEvents[_eventId];
+        delete eventIdToToken[_eventId];
+        delete events[_eventId];
+        
+        emit EventDestroyed(_eventId);
+
+    }
+    
+    function pendingEventsLength(uint256 _tokenId) public view returns(uint256){
+        return pendingEvents[_tokenId].length;
+    }
+    
+    function eventsLength(uint256 _tokenId) public view returns(uint256){
+        return tokenEventsList[_tokenId].length;
     }
     
 }
