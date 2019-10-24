@@ -12,6 +12,8 @@ const infraAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 const bouncerAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 const validatorAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 
+const faucetAddress = "0x68C817BfEf37b5cBb691a2d02517fb8b76e7cD47"
+
 
 module.exports = async function(deployer) {
   // deployment steps
@@ -53,6 +55,7 @@ module.exports = async function(deployer) {
                           arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
                           whitelistInstance.grantAbilities(arianeeSmartAssetInstance.address,[2]);
                           whitelistInstance.grantAbilities(arianeeEventInstance.address,[2]);
+                          ariaInstance.transfer(faucetAddress, "100000000000000000000000");
 
                           console.log("Aria contract", ariaInstance.address);
                           console.log("whitelist contract", whitelistInstance.address);
