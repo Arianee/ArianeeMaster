@@ -4,10 +4,14 @@ const Aria = artifacts.require('Aria');
 const Whitelist = artifacts.require('ArianeeWhitelist');
 const CreditHistory = artifacts.require('ArianeeCreditHistory');
 const ArianeeEvent = artifacts.require('ArianeeEvent');
+const ArianeeIdentity = artifacts.require('ArianeeIdentity');
 
 const authorizedExchangeAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 const projectAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 const infraAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
+const bouncerAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
+const validatorAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
+
 
 module.exports = async function(deployer) {
   // deployment steps
@@ -33,7 +37,10 @@ module.exports = async function(deployer) {
                         "10",
                         "10"
                       )
-                        .then(arianeeStoreInstance=>{
+                        .then(async (arianeeStoreInstance)=>{
+
+                          const arianeeIdentityInstance = await deployer.deploy(ArianeeIdentity, bouncerAddress, validatorAddress);
+
                           arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
                           arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
                           arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
@@ -53,6 +60,7 @@ module.exports = async function(deployer) {
                           console.log("credit history contract", creditHistoryInstance.address);
                           console.log("arianee event contract", arianeeEventInstance.address);
                           console.log("store contract", arianeeStoreInstance.address);
+                          console.log('identity', arianeeIdentityInstance.address);
 
                         })
                     })
