@@ -42,7 +42,7 @@ module.exports = async function(deployer, network, accounts) {
                       )
                         .then(async (arianeeStoreInstance)=>{
 
-                          const arianeeIdentityInstance = await deployer.deploy(ArianeeIdentity, bouncerAddress, validatorAddress);
+                          const arianeeIdentityInstance = await deployer.deploy(ArianeeIdentity, accounts[0], accounts[0]);
 
                           arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
                           arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
