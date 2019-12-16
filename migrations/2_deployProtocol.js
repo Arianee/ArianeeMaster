@@ -35,7 +35,7 @@ module.exports = async function(deployer, network, accounts) {
                         arianeeSmartAssetInstance.address,
                         creditHistoryInstance.address,
                         arianeeEventInstance.address,
-                        "10000000000000",
+                        "10",
                         "10",
                         "10",
                         "10"
