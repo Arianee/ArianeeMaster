@@ -25,19 +25,11 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
   iArianeeStore public store;
   
   /**
-   * @dev fees if stake unlocked by owner. 
+   * @dev Arianee admin addresses.
    */
-  uint8 fees = 2;
+  address public arianeeUnlockerAddress;
+  address public arianeeWithdrawAddress;
   
-  /**
-   * @dev address receiving fees.
-   */
-  address public feesReceiver;
-
-  /**
-   * @dev The default duration of stake lock-in (in seconds)
-   */
-  uint256 public defaultLockInDuration = 3122064000; // 99 years
 
   /**
    * @dev Mapping of stakes.
@@ -48,10 +40,10 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @dev Stake structure.
    */
   struct Stake {
-    uint256 unlockedTimestamp;
     uint256 actualAmount;
     uint256 usdAmount;
     address stakedFor;
+    bool blocked;
   }
 
   /**
@@ -72,7 +64,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
   /**
    * @dev events
    */
-  event unlockStake(address _staker);
+  event StakeUnlock(address _staker);
   event Staked(address _owner, uint256 _amount, uint256 _usdAmount, uint256 _totakStake, bytes _data);
   event Unstaked(address _owner, uint256 _amount, uint256 _totalStake, bytes _data);
   event SetAddress(string _addressType, address _newAddress);
@@ -88,7 +80,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     require(
       stakingToken.transferFrom(_address, address(this), _amount),
       "Stake required");
-
+      
     _;
   }
 
@@ -97,9 +89,16 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @param _stakingToken ERC20 The address of the token contract used for staking
    * @param _arianeeStoreAdress Address of the arianee store.
    */
-  constructor(ERC20 _stakingToken, address _arianeeStoreAdress) public {
+  constructor(
+      ERC20 _stakingToken,
+      address _arianeeStoreAdress,
+      address _newArianeeUnlockerAddress,
+      address _newArianeeWithdrawAddress
+  ) public {
     stakingToken = _stakingToken;
     store = iArianeeStore(address(_arianeeStoreAdress));
+    arianeeUnlockerAddress = _newArianeeUnlockerAddress;
+    arianeeWithdrawAddress = _newArianeeWithdrawAddress;
   }
   
   /**
@@ -111,18 +110,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     emit SetAddress("storeAddress", _storeAddress);
   }
 
-  /**
-   * @dev Returns the timestamps for when active personal stakes for an address will unlock
-   * @param _address address that created the stakes
-   * @return uint256[] array of timestamps
-   */
-  function getPersonalStakeUnlockedTimestamps(address _address) external view returns (uint256[] memory) {
-    uint256[] memory timestamps;
-    (timestamps,,,) = getPersonalStakes(_address);
-
-    return timestamps;
-  }
-
+  
   /**
    * @dev Returns the stake actualAmount for active personal stakes for an address
    * @param _address address that created the stakes
@@ -130,7 +118,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    */
   function getPersonalStakeActualAmounts(address _address) external view returns (uint256[] memory) {
     uint256[] memory actualAmounts;
-    (,actualAmounts,,) = getPersonalStakes(_address);
+    (actualAmounts,,) = getPersonalStakes(_address);
 
     return actualAmounts;
   }
@@ -142,7 +130,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    */
   function getPersonalStakeActualUsdAmounts(address _address) external view returns (uint256[] memory) {
     uint256[] memory ActualUsdAmounts;
-    (,,ActualUsdAmounts,) = getPersonalStakes(_address);
+    (,ActualUsdAmounts,) = getPersonalStakes(_address);
 
     return ActualUsdAmounts;
   }
@@ -154,62 +142,38 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    */
   function getPersonalStakeForAddresses(address _address) external view returns (address[] memory) {
     address[] memory stakedFor;
-    (,,,stakedFor) = getPersonalStakes(_address);
+    (,,stakedFor) = getPersonalStakes(_address);
 
     return stakedFor;
   }
   
+  
   /**
-   * @notice Change address of the fess receiver.
-   * @notice Can only be called by the contract's owner.
-   * @param _newFeesReceiver new address of the fees receiver.
+   * @dev unlock a stake 
+   * @notice only arianeeUnlockerAddress can unlock a stake
+   * @param _staker Staker to unlock.
    */
-  function updateFeesReceiver(address _newFeesReceiver) external onlyOwner() {
-      feesReceiver = _newFeesReceiver;
+  function unlockStake(address _staker) external {
+      require(msg.sender == arianeeUnlockerAddress);
+      Stake storage personalStake = stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex];
+      personalStake.blocked = false;
+  }
+  
+  
+  /**
+   * @dev Change the arianee unlocker address
+   * @param _newArianeeUnlockerAddress the new arianee unlocker address
+   */
+  function setArianeeUnlockerAddress(address _newArianeeUnlockerAddress) onlyOwner() external{
+      arianeeUnlockerAddress = _newArianeeUnlockerAddress;
   }
   
   /**
-   * @notice Change the % of fees.
-   * @notice Can only be called by the contract's owner.
-   * @param _fees new fees.
+   * @dev Change the arianee withdraw address
+   * @param _newArianeeWithdrawAddress the new arianee withdraw address
    */
-  function udpateFees(uint8 _fees) external onlyOwner() {
-      fees = _fees;
-  }
-  
-  /**
-   * @notice Unlock a stake with fees.
-   * @param _staker address of the staker.
-   * @param _percentUnstake keeped by the contract's owner.
-   */
-  function unlockStakeWithFee(address _staker, uint8 _percentUnstake) external onlyOwner() {
-      require(_percentUnstake <= 100);
-      uint256 firstStakeValue=  stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex].actualAmount;
-      uint256 _fees = firstStakeValue.mul(fees);
-      uint256 _feesrest = _fees.mod(100);
-      
-      uint256 _feesAmount= _fees.sub(_feesrest).div(100);
-      uint256 _stakeWithoutFee = firstStakeValue.sub(_feesAmount);
-    
-      uint256 _stakeKeeped = _stakeWithoutFee.mul(100-_percentUnstake);
-      uint256 _stakeKeepedMod = _stakeKeeped.mod(100);
-      _stakeKeeped = _stakeKeeped.sub(_stakeKeepedMod).div(100);
-      
-      stakeHolders[_staker].totalStakedFor = stakeHolders[_staker].totalStakedFor.sub(_stakeKeeped).sub(_feesAmount);
-      stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex].actualAmount = stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex].actualAmount.sub(_stakeKeeped).sub(_feesAmount);
-      
-      stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex].unlockedTimestamp = block.timestamp;
-      stakingToken.transfer(feesReceiver, (_stakeKeeped.add(_feesAmount)));
-      
-      emit unlockStake(_staker);
-  }
-  
-  /**
-   * @notice Update the default lock in duration of the stake.
-   * @param _defaultLockInDuration new value of the lock duration in seconds.
-   */
-  function updateDefaultLockInDuration(uint _defaultLockInDuration) external onlyOwner(){
-      defaultLockInDuration = _defaultLockInDuration;
+  function setArianeeWithdrawAddress(address _newArianeeWithdrawAddress) onlyOwner() external{
+      arianeeWithdrawAddress = _newArianeeWithdrawAddress;
   }
 
   /**
@@ -222,7 +186,6 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     createStake(
       msg.sender,
       _amount,
-      defaultLockInDuration,
       _data);
   }
 
@@ -237,7 +200,6 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     createStake(
       _user,
       _amount,
-      defaultLockInDuration,
       _data);
   }
 
@@ -253,7 +215,27 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
   function unstake(uint256 _amount, bytes memory _data) public whenNotPaused() {
     withdrawStake(
       _amount,
-      _data);
+      _data,
+      msg.sender);
+  }
+  
+  /**
+   * @notice Unstakes a certain amount of tokens, this SHOULD return the given amount of tokens to the user, if unstaking is currently not possible the function MUST revert
+   * @notice MUST trigger Unstaked event
+   * @dev Unstaking tokens is an atomic operation—either all of the tokens in a stake, or none of the tokens.
+   * @dev Users can only unstake a single stake at a time, it is must be their oldest active stake. Upon releasing that stake, the tokens will be
+   *  transferred back to their account, and their personalStakeIndex will increment to the next active stake.
+   * @dev this function allow arianee to unstake any stake
+   * @param _amount uint256 the amount of tokens to unstake
+   * @param _data bytes optional data to include in the Unstake event
+   * @param _staker address to unstake
+   */
+  function unstake(uint256 _amount, bytes memory _data, address _staker) public whenNotPaused() {
+    require(msg.sender == arianeeWithdrawAddress);
+    withdrawStake(
+      _amount,
+      _data,
+      _staker);
   }
 
   /**
@@ -310,26 +292,23 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
   )
     view
     public
-    returns(uint256[] memory, uint256[] memory, uint256[] memory, address[] memory)
+    returns(uint256[] memory, uint256[] memory, address[] memory)
   {
     StakeContract storage stakeContract = stakeHolders[_address];
 
     uint256 arraySize = stakeContract.personalStakes.length - stakeContract.personalStakeIndex;
-    uint256[] memory unlockedTimestamps = new uint256[](arraySize);
     uint256[] memory actualAmounts = new uint256[](arraySize);
     uint256[] memory actualUsdAmounts = new uint256[](arraySize);
     address[] memory stakedFor = new address[](arraySize);
 
     for (uint256 i = stakeContract.personalStakeIndex; i < stakeContract.personalStakes.length; i++) {
       uint256 index = i - stakeContract.personalStakeIndex;
-      unlockedTimestamps[index] = stakeContract.personalStakes[i].unlockedTimestamp;
       actualAmounts[index] = stakeContract.personalStakes[i].actualAmount;
       actualUsdAmounts[index] = stakeContract.personalStakes[i].usdAmount;
       stakedFor[index] = stakeContract.personalStakes[i].stakedFor;
     }
 
     return (
-      unlockedTimestamps,
       actualAmounts,
       actualUsdAmounts,
       stakedFor
@@ -340,13 +319,11 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @dev Helper function to create stakes for a given address
    * @param _address address The address the stake is being created for
    * @param _amount uint256 The number of tokens being staked
-   * @param _lockInDuration uint256 The duration to lock the tokens for
    * @param _data bytes optional data to include in the Stake event
    */
   function createStake(
     address _address,
     uint256 _amount,
-    uint256 _lockInDuration,
     bytes memory _data
   )
     internal
@@ -363,10 +340,10 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     stakeHolders[_address].totalUSDStakedFor = stakeHolders[_address].totalUSDStakedFor.add(_usdAmount);
     stakeHolders[msg.sender].personalStakes.push(
       Stake(
-        block.timestamp.add(_lockInDuration),
         _amount,
         _usdAmount,
-        _address)
+        _address,
+        true)
       );
 
     emit Staked(
@@ -384,19 +361,21 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
    * @param _amount uint256 The amount to withdraw. MUST match the stake amount for the
    *  stake at personalStakeIndex.
    * @param _data bytes optional data to include in the Unstake event
+   * @param _staker address of the staker
    */
   function withdrawStake(
     uint256 _amount,
-    bytes memory _data
+    bytes memory _data,
+    address _staker
   )
     internal
   {
-    Stake storage personalStake = stakeHolders[msg.sender].personalStakes[stakeHolders[msg.sender].personalStakeIndex];
+    Stake storage personalStake = stakeHolders[_staker].personalStakes[stakeHolders[_staker].personalStakeIndex];
 
     require(
-      personalStake.unlockedTimestamp <= block.timestamp,
-      "The current stake hasn't unlocked yet");
-
+        personalStake.blocked == false,
+        "Your stake is blocked");
+    
     require(
       personalStake.actualAmount == _amount,
       "The unstake amount does not match the current stake");
@@ -409,7 +388,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
       .totalStakedFor.sub(personalStake.actualAmount);
 
     personalStake.actualAmount = 0;
-    stakeHolders[msg.sender].personalStakeIndex++;
+    stakeHolders[_staker].personalStakeIndex++;
 
     emit Unstaked(
       personalStake.stakedFor,
@@ -417,6 +396,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
       totalStakedFor(personalStake.stakedFor),
       _data);
   }
+  
   
 }
 
