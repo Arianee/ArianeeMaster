@@ -328,6 +328,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
   )
     internal
     canStake(msg.sender, _amount)
+    whenNotPaused()
   {
     
     if (!stakeHolders[msg.sender].exists) {
@@ -338,7 +339,7 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
     
     stakeHolders[_address].totalStakedFor = stakeHolders[_address].totalStakedFor.add(_amount);
     stakeHolders[_address].totalUSDStakedFor = stakeHolders[_address].totalUSDStakedFor.add(_usdAmount);
-    stakeHolders[msg.sender].personalStakes.push(
+    stakeHolders[_address].personalStakes.push(
       Stake(
         _amount,
         _usdAmount,
@@ -388,13 +389,23 @@ contract ArianeeStaking is ERC900, Ownable, Pausable {
       .totalStakedFor.sub(personalStake.actualAmount);
 
     personalStake.actualAmount = 0;
+    personalStake.usdAmount = 0;
+    
     stakeHolders[_staker].personalStakeIndex++;
+    
 
     emit Unstaked(
       personalStake.stakedFor,
       _amount,
       totalStakedFor(personalStake.stakedFor),
       _data);
+  }
+  
+  function withdrawAllToken() external whenNotPaused() {
+      require(msg.sender == arianeeWithdrawAddress);
+      uint256 _amount = stakingToken.balanceOf(address(this));
+      stakingToken.transfer(address(arianeeWithdrawAddress),_amount);
+     
   }
   
   
