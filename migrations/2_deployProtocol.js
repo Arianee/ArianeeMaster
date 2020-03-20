@@ -5,6 +5,7 @@ const Whitelist = artifacts.require('ArianeeWhitelist');
 const CreditHistory = artifacts.require('ArianeeCreditHistory');
 const ArianeeEvent = artifacts.require('ArianeeEvent');
 const ArianeeIdentity = artifacts.require('ArianeeIdentity');
+const ArianeeLost = artifacts.require('ArianeeLost');
 
 const authorizedExchangeAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
 const projectAddress = "0xd03ea8624C8C5987235048901fB614fDcA89b117";
@@ -65,15 +66,16 @@ module.exports = async function(deployer, network, accounts) {
                           ariaInstance.transfer(faucetAddress, "100000000000000000000000");
                           web3.eth.sendTransaction({from:accounts[0], to: faucetAddress, value:"99000000000000000000"});
 
-
-
-                          console.log("Aria contract", ariaInstance.address);
-                          console.log("whitelist contract", whitelistInstance.address);
-                          console.log("smart asset contract", arianeeSmartAssetInstance.address);
-                          console.log("credit history contract", creditHistoryInstance.address);
-                          console.log("arianee event contract", arianeeEventInstance.address);
-                          console.log("store contract", arianeeStoreInstance.address);
-                          console.log('identity', arianeeIdentityInstance.address);
+                          return deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address).then(arianeeLostAddress=>{
+                            console.log("Aria contract", ariaInstance.address);
+                            console.log("whitelist contract", whitelistInstance.address);
+                            console.log("smart asset contract", arianeeSmartAssetInstance.address);
+                            console.log("credit history contract", creditHistoryInstance.address);
+                            console.log("arianee event contract", arianeeEventInstance.address);
+                            console.log("store contract", arianeeStoreInstance.address);
+                            console.log('identity', arianeeIdentityInstance.address);
+                            console.log('lost contract', arianeeLostAddress.address);
+                          })
 
                         })
                     })
