@@ -24,7 +24,7 @@ Ownable, Pausable{
     iArianeeWhitelist arianeeWhitelist;
     ERC721Interface smartAsset;
     
-    uint256 eventDestroyDelay = 7776000;
+    uint256 eventDestroyDelay = 31536000;
     
     /// Event ID per token
     mapping(uint256 => uint256[]) public tokenEventsList;
@@ -62,18 +62,18 @@ Ownable, Pausable{
     event EventDestroyDelayUpdated(uint256 _newDelay);
     
     modifier onlyStore(){
-        //require(msg.sender == arianeeStoreAddress);
+        require(msg.sender == arianeeStoreAddress);
         _;
     }
     
     modifier canOperate(uint256 _eventId,address _operator){
-        //uint256 _tokenId = eventIdToToken[_eventId];
-        //require(smartAsset.canOperate(_tokenId, _operator) || smartAsset.issuerOf(_tokenId) == _operator);
+        uint256 _tokenId = eventIdToToken[_eventId];
+        require(smartAsset.canOperate(_tokenId, _operator) || smartAsset.issuerOf(_tokenId) == _operator);
         _;
     }
     
     modifier isProvider(uint256 _eventId) {
-        //require(msg.sender == events[_eventId].provider);
+        require(msg.sender == events[_eventId].provider);
         _;
     }
     
