@@ -40,6 +40,14 @@ contract iArianeeCreditHistory {
  }
 
 
+/**
+ * @title Interface to interact with ArianeeMessage
+ */
+contract iArianeeMessage{
+  function readMessage(uint256 _messageId) public returns (uint256);
+  function sendMessage(uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public returns (uint256);
+}
+
 import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
 import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
 import "@0xcert/ethereum-erc20-contracts/src/contracts/token.sol";
@@ -58,6 +66,8 @@ contract ArianeeStore is Pausable {
     ERC721Interface public nonFungibleRegistry;
     iArianeeCreditHistory public creditHistory;
     iArianeeEvent public arianeeEvent;
+    iArianeeMessage public arianeeMessage;
+
 
     /**
      * @dev Mapping of the credit price in $cent.
@@ -126,11 +136,11 @@ contract ArianeeStore is Pausable {
         ERC721 _nonFungibleRegistry,
         address _creditHistoryAddress,
         address _arianeeEvent,
+        address _arianeeMessage,
         uint256 _ariaUSDExchange,
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
         uint256 _creditPricesUSD2
-
     )
     public
     {
@@ -138,6 +148,7 @@ contract ArianeeStore is Pausable {
         nonFungibleRegistry = ERC721Interface(address(_nonFungibleRegistry));
         creditHistory = iArianeeCreditHistory(address(_creditHistoryAddress));
         arianeeEvent = iArianeeEvent(address(_arianeeEvent));
+        arianeeMessage = iArianeeMessage(address(_arianeeMessage));
 
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
@@ -228,8 +239,8 @@ contract ArianeeStore is Pausable {
      * @notice Hydrate token and dispatch rewards.
      * @notice Reserve token if token not reserved.
      * @param _tokenId ID of the NFT to modify.
-     * @param _imprint Proof of the certification.
-     * @param _uri URI of the JSON certification.
+     * @param _imprint Proof.
+     * @param _uri URI of the JSON.
      * @param _encryptedInitialKey Initial encrypted key.
      * @param _tokenRecoveryTimestamp Limit date for the issuer to be able to transfer back the NFT.
      * @param _initialKeyIsRequestKey If true set initial key as request key.
@@ -252,7 +263,7 @@ contract ArianeeStore is Pausable {
         uint256 _reward = nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey,  msg.sender);
         _dispatchRewardsAtHydrate(_providerBrand, _reward);
     }
-    
+
     /**
      * @notice Request a nft and dispatch rewards.
      * @param _tokenId ID of the NFT to transfer.
@@ -266,13 +277,13 @@ contract ArianeeStore is Pausable {
         bool _keepRequestToken,
         address _providerOwner,
         bytes calldata _signature
-    ) 
+    )
         external whenNotPaused()
     {
         uint256 _reward = nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, msg.sender, _signature);
         _dispatchRewardsAtRequest(_providerOwner, _reward);
     }
-    
+
     /**
      * @notice Change the percent of rewards per actor.
      * @notice Can only be called by owner.
@@ -300,7 +311,7 @@ contract ArianeeStore is Pausable {
 
         emit NewDispatchPercent(_percentInfra, _percentBrandsProvider, _percentOwnerProvider, _arianeeProject, _assetHolder);
     }
-    
+
     /**
      * @notice Get all Arias from the previous store.
      * @notice Can only be called by the owner.
@@ -310,7 +321,7 @@ contract ArianeeStore is Pausable {
         ArianeeStore oldStore = ArianeeStore(address(_oldStoreAddress));
         oldStore.withdrawArias();
     }
-    
+
     /**
      * @notice Withdraw all arias to the new store.
      * @notice Can only be called by the new store.
@@ -320,19 +331,19 @@ contract ArianeeStore is Pausable {
         require(msg.sender == creditHistory.arianeeStoreAddress());
         acceptedToken.transfer(address(creditHistory.arianeeStoreAddress()),acceptedToken.balanceOf(address(this)));
     }
-    
+
     /**
      * @notice Create an event and spend an event credit.
      * @param _tokenId ID concerned by the event.
-     * @param _imprint Proof of the certification.
-     * @param _uri URI of the JSON certification.
+     * @param _imprint Proof.
+     * @param _uri URI of the JSON.
      */
     function createEvent(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external whenNotPaused(){
         uint256 _rewards = _spendSmartAssetsCreditFunction(2, 1);
         arianeeEvent.create(_eventId, _tokenId, _imprint, _uri, _rewards, msg.sender);
         _dispatchRewardsAtHydrate(_providerBrand, _rewards);
     }
-    
+
     /**
      * @notice Owner accept an event.
      * @param _eventId event accepted.
@@ -342,7 +353,7 @@ contract ArianeeStore is Pausable {
         uint256 _rewards = arianeeEvent.accept(_eventId, msg.sender);
         _dispatchRewardsAtRequest(_providerOwner, _rewards);
     }
-    
+
     /**
      * @notice Owner refuse an event.
      * @param _eventId event accepted.
@@ -352,7 +363,29 @@ contract ArianeeStore is Pausable {
         uint256 _rewards = arianeeEvent.refuse(_eventId, msg.sender);
         _dispatchRewardsAtRequest(_providerOwner, _rewards);
     }
-    
+
+
+    /**
+   * @notice Create a message and spend an Message credit.
+   * @param _tokenId ID concerned by the message.
+   * @param _imprint Proof.
+   */
+    function createMessage(uint256 _tokenId, bytes32 _imprint, address _providerBrand) external whenNotPaused(){
+      uint256 _reward = _spendSmartAssetsCreditFunction(1, 1);
+      arianeeMessage.sendMessage(_tokenId,_imprint,msg.sender,_reward);
+
+      _dispatchRewardsAtHydrate(_providerBrand, _reward);
+    }
+
+    /**
+  * @notice Read a message and dispatch rewards.
+  * @param _messageId ID of message.
+  */
+    function readMessage(uint256 _messageId, address _providerBrand) external whenNotPaused(){
+      uint256 _reward = arianeeMessage.readMessage(_messageId);
+
+      _dispatchRewardsAtRequest(_providerBrand, _reward);
+    }
     /**
      * @notice The USD credit price per type.
      * @param _creditType for which we want the USD price.
@@ -361,7 +394,7 @@ contract ArianeeStore is Pausable {
     function creditPriceUSD(uint256 _creditType) external view returns(uint256 _creditPriceUSD) {
         _creditPriceUSD = creditPricesUSD[_creditType];
     }
-    
+
     /**
      * @notice dispatch for rewards.
      * @param _receiver for which we want the % of rewards.
@@ -370,7 +403,7 @@ contract ArianeeStore is Pausable {
     function percentOfDispatch(uint8 _receiver) external view returns(uint8 _percent){
         _percent = dispatchPercent[_receiver];
     }
-    
+
     /**
      * @notice Send the price a of a credit in aria
      * @param _creditType uint256
@@ -379,7 +412,7 @@ contract ArianeeStore is Pausable {
     function getCreditPrice(uint256 _creditType) external view returns (uint256) {
         return creditPrices[_creditType];
     }
-    
+
     /**
      * @dev Allow or not a transfer in the SmartAsset contract.
      * @dev not used for now.
@@ -402,7 +435,7 @@ contract ArianeeStore is Pausable {
     function canDestroy(uint256 _tokenId, address _sender) external pure returns(bool){
       return false;
     }
-    
+
     /**
      * @notice Reserve ArianeeSmartAsset
      * @param _id uint256 id of the NFT
@@ -412,7 +445,7 @@ contract ArianeeStore is Pausable {
         uint256 rewards = _spendSmartAssetsCreditFunction(0, 1);
         nonFungibleRegistry.reserveToken(_id, _to, rewards);
     }
-    
+
     /**
      * @dev Internal function update creditPrice.
      * @notice creditPrice need to be >100
@@ -425,7 +458,7 @@ contract ArianeeStore is Pausable {
         creditPrices[1] = creditPricesUSD[1] * ariaUSDExchange;
         creditPrices[2] = creditPricesUSD[2] * ariaUSDExchange;
     }
-    
+
     /**
      * @dev Spend credits
      * @param _type credit type used.
@@ -436,7 +469,7 @@ contract ArianeeStore is Pausable {
         emit CreditSpended(_type, _quantity);
         return rewards;
     }
-    
+
     /**
      * @dev Dispatch rewards at creation.
      * @param _providerBrand address of the provider of the interface.
@@ -457,6 +490,6 @@ contract ArianeeStore is Pausable {
         acceptedToken.transfer(_providerOwner,(_reward/100)*dispatchPercent[2]);
         acceptedToken.transfer(msg.sender,(_reward/100)*dispatchPercent[4]);
     }
-    
+
 
 }
