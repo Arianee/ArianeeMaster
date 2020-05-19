@@ -44,7 +44,7 @@ contract iArianeeCreditHistory {
  * @title Interface to interact with ArianeeMessage
  */
 contract iArianeeMessage{
-  function readMessage(uint256 _messageId) public returns (uint256);
+  function readMessage(uint256 _messageId, address _from) public returns (uint256);
   function sendMessage(uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public returns (uint256);
 }
 
@@ -382,7 +382,7 @@ contract ArianeeStore is Pausable {
   * @param _messageId ID of message.
   */
     function readMessage(uint256 _messageId, address _providerBrand) external whenNotPaused(){
-      uint256 _reward = arianeeMessage.readMessage(_messageId);
+      uint256 _reward = arianeeMessage.readMessage(_messageId, msg.sender);
 
       _dispatchRewardsAtRequest(_providerBrand, _reward);
     }
