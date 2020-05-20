@@ -31,6 +31,7 @@ contract ArianeeMessage is Ownable{
     bytes32 imprint;
     address sender;
     address to;
+    uint256 tokenId;
   }
 
   Message[] public messages;
@@ -38,11 +39,11 @@ contract ArianeeMessage is Ownable{
   /**
 * @dev This emits when a message is sent.
 */
-  event MessageSent(address indexed _receiver, address indexed _sender, uint256 indexed _tokenId);
+  event MessageSent(address indexed _receiver, address indexed _sender, uint256 indexed _tokenId, uint256 _messageId);
   /**
 * @dev This emits when a message is read.
 */
-  event MessageRead(address indexed _receiver, address indexed _sender, address indexed _messageId);
+  event MessageRead(address indexed _receiver, address indexed _sender, uint256 indexed _messageId);
 
 
   constructor(address _whitelistAddress, address _smartAssetAddress) public{
@@ -54,7 +55,7 @@ contract ArianeeMessage is Ownable{
         require(msg.sender == arianeeStoreAddress);
         _;
     }
-    
+
     /**
      * @dev set a new store address
      * @notice can only be called by the contract owner.
@@ -71,7 +72,7 @@ contract ArianeeMessage is Ownable{
     function messageLengthByReceiver(address _receiver) public view returns (uint256){
            return receiverToMessageIds[_receiver].length;
     }
-    
+
   /**
    * @dev Send a message
    * @notice can only be called by an whitelisted address and through the store
@@ -86,7 +87,8 @@ contract ArianeeMessage is Ownable{
     Message memory _message = Message({
             imprint : _imprint,
             sender : _from,
-            to : _owner
+            to : _owner,
+            tokenId: _tokenId
         });
 
 
@@ -95,8 +97,9 @@ contract ArianeeMessage is Ownable{
 
     rewards[_messageIndex] = _reward;
 
-    emit MessageSent(_owner, _from, _tokenId);
-        return _messageIndex;
+    emit MessageSent(_owner, _from, _tokenId, _messageIndex);
+
+    return _messageIndex;
     }
 
   /**
@@ -104,13 +107,16 @@ contract ArianeeMessage is Ownable{
  * @notice can only be called by the store
  * @param _messageId of the message
  */
-  function readMessage(uint256 _messageId) public onlyStore() returns (uint256){
+  function readMessage(uint256 _messageId, address _from) public onlyStore() returns (uint256){
     uint256 reward = rewards[_messageId];
     address _owner = messages[_messageId].to;
+
+    require(_from == _owner);
+
     address _sender = messages[_messageId].sender;
     delete rewards[_messageId];
 
-    emit MessageSent(_owner, _sender, _messageId);
+    emit MessageRead(_owner, _sender, _messageId);
 
     return reward;
     }
