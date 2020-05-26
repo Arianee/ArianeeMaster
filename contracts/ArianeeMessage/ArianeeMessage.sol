@@ -34,15 +34,15 @@ contract ArianeeMessage is Ownable{
     uint256 tokenId;
   }
 
-  Message[] public messages;
+  mapping(uint256 => Message) public messages;
 
   /**
-* @dev This emits when a message is sent.
-*/
+   * @dev This emits when a message is sent.
+   */
   event MessageSent(address indexed _receiver, address indexed _sender, uint256 indexed _tokenId, uint256 _messageId);
   /**
-* @dev This emits when a message is read.
-*/
+   * @dev This emits when a message is read.
+   */
   event MessageRead(address indexed _receiver, address indexed _sender, uint256 indexed _messageId);
 
 
@@ -76,14 +76,16 @@ contract ArianeeMessage is Ownable{
   /**
    * @dev Send a message
    * @notice can only be called by an whitelisted address and through the store
+   * @param _messageId id of the message
    * @param _tokenId token associate to the message
    * @param _imprint of the message
    */
-  function sendMessage(uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public onlyStore() returns (uint256){
+  function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public onlyStore() {
 
     address _owner = smartAsset.ownerOf(_tokenId);
     require(whitelist.isAuthorized(_tokenId, _from, _owner));
-
+    require(messages[_messageId].sender == address(0));
+    
     Message memory _message = Message({
             imprint : _imprint,
             sender : _from,
@@ -92,14 +94,12 @@ contract ArianeeMessage is Ownable{
         });
 
 
-    uint256 _messageIndex = messages.push(_message)-1;
-    receiverToMessageIds[_owner].push(_messageIndex);
+    messages[_messageId] = _message;
+    receiverToMessageIds[_owner].push(_messageId);
 
-    rewards[_messageIndex] = _reward;
+    rewards[_messageId] = _reward;
 
-    emit MessageSent(_owner, _from, _tokenId, _messageIndex);
-
-    return _messageIndex;
+    emit MessageSent(_owner, _from, _tokenId, _messageId);
     }
 
   /**
