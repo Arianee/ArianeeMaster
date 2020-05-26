@@ -45,7 +45,7 @@ contract iArianeeCreditHistory {
  */
 contract iArianeeMessage{
   function readMessage(uint256 _messageId, address _from) public returns (uint256);
-  function sendMessage(uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public returns (uint256);
+  function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public;
 }
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
@@ -337,6 +337,7 @@ contract ArianeeStore is Pausable {
      * @param _tokenId ID concerned by the event.
      * @param _imprint Proof.
      * @param _uri URI of the JSON.
+     * @param _providerBrand address of the provider of the interface.
      */
     function createEvent(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external whenNotPaused(){
         uint256 _rewards = _spendSmartAssetsCreditFunction(2, 1);
@@ -367,12 +368,14 @@ contract ArianeeStore is Pausable {
 
     /**
    * @notice Create a message and spend an Message credit.
+   * @param _messageId ID of the message to create
    * @param _tokenId ID concerned by the message.
    * @param _imprint Proof.
+   * @param _providerBrand address of the provider of the interface.
    */
-    function createMessage(uint256 _tokenId, bytes32 _imprint, address _providerBrand) external whenNotPaused(){
+    function createMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _providerBrand) external whenNotPaused(){
       uint256 _reward = _spendSmartAssetsCreditFunction(1, 1);
-      arianeeMessage.sendMessage(_tokenId,_imprint,msg.sender,_reward);
+      arianeeMessage.sendMessage(_messageId, _tokenId, _imprint, msg.sender, _reward);
 
       _dispatchRewardsAtHydrate(_providerBrand, _reward);
     }
