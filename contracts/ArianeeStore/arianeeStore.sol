@@ -48,6 +48,15 @@ contract iArianeeMessage{
   function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public;
 }
 
+/**
+ * @title Interface to interact with ArianeeUpdate
+ */
+contract iArianeeUpdate{
+  function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _issuer, uint256 _reward) external;
+  function readUpdateSmartAsset(uint256 _tokenId, address _from) external returns(uint256);
+}
+
+
 import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
 import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
 import "@0xcert/ethereum-erc20-contracts/src/contracts/token.sol";
@@ -67,7 +76,7 @@ contract ArianeeStore is Pausable {
     iArianeeCreditHistory public creditHistory;
     iArianeeEvent public arianeeEvent;
     iArianeeMessage public arianeeMessage;
-
+    iArianeeUpdate public arianeeUpdate;
 
     /**
      * @dev Mapping of the credit price in $cent.
@@ -137,10 +146,12 @@ contract ArianeeStore is Pausable {
         address _creditHistoryAddress,
         address _arianeeEvent,
         address _arianeeMessage,
+        address _arianeeUpdate,
         uint256 _ariaUSDExchange,
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
-        uint256 _creditPricesUSD2
+        uint256 _creditPricesUSD2,
+        uint256 _creditPricesUSD3
     )
     public
     {
@@ -149,11 +160,12 @@ contract ArianeeStore is Pausable {
         creditHistory = iArianeeCreditHistory(address(_creditHistoryAddress));
         arianeeEvent = iArianeeEvent(address(_arianeeEvent));
         arianeeMessage = iArianeeMessage(address(_arianeeMessage));
-
+        arianeeUpdate = iArianeeUpdate(address(_arianeeUpdate));
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
         creditPricesUSD[1] = _creditPricesUSD1;
         creditPricesUSD[2] = _creditPricesUSD2;
+        creditPricesUSD[3] = _creditPricesUSD3;
         _updateCreditPrice();
     }
 
@@ -381,14 +393,40 @@ contract ArianeeStore is Pausable {
     }
 
     /**
-  * @notice Read a message and dispatch rewards.
-  * @param _messageId ID of message.
-  */
-    function readMessage(uint256 _messageId, address _providerBrand) external whenNotPaused(){
+    * @notice Read a message and dispatch rewards.
+    * @param _messageId ID of message.
+    * @param _walletProvider address of the provider of the wallet
+    */
+    function readMessage(uint256 _messageId, address _walletProvider) external whenNotPaused(){
       uint256 _reward = arianeeMessage.readMessage(_messageId, msg.sender);
 
       _dispatchRewardsAtRequest(_providerBrand, _reward);
     }
+
+
+  /**
+   * @notice Create/update a smartAsset update and spend an Update Credit.
+   * @param _tokenId ID concerned by the message.
+   * @param _imprint Imprint of the update.
+   * @param _providerBrand address of the provider of the interface.
+   */
+    function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _providerBrand) external whenNotPaused(){
+        uint256 _reward = _spendSmartAssetsCreditFunction(3, 1);
+        arianeeUpdate.updateSmartAsset(_tokenId, _imprint, msg.sender, _reward);
+        _dispatchRewardsAtHydrate(_providerBrand, _reward);
+    }
+
+  /**
+    * @notice Read an update and dispatch rewards.
+    * @param _tokenId ID concerned by the update.
+    * @param _walletProvider address of the provider of the wallet
+    */
+    function readUpdateSmartAsset(uint256 _tokenId, address _walletProvider) external whenNotPaused(){
+        uint256 _reward = arianeeUpdate.readUpdateSmartAsset(_tokenId, msg.sender);
+
+       _dispatchRewardsAtRequest(_walletProvider, _reward);
+    }
+
     /**
      * @notice The USD credit price per type.
      * @param _creditType for which we want the USD price.
@@ -457,9 +495,11 @@ contract ArianeeStore is Pausable {
         require(creditPricesUSD[0] * ariaUSDExchange >=100);
         require(creditPricesUSD[1] * ariaUSDExchange >=100);
         require(creditPricesUSD[2] * ariaUSDExchange >=100);
+        require(creditPricesUSD[3] * ariaUSDExchange >=100);
         creditPrices[0] = creditPricesUSD[0] * ariaUSDExchange;
         creditPrices[1] = creditPricesUSD[1] * ariaUSDExchange;
         creditPrices[2] = creditPricesUSD[2] * ariaUSDExchange;
+        creditPrices[3] = creditPricesUSD[3] * ariaUSDExchange;
     }
 
     /**
