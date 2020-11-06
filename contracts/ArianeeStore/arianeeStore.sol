@@ -400,7 +400,7 @@ contract ArianeeStore is Pausable {
     function readMessage(uint256 _messageId, address _walletProvider) external whenNotPaused(){
       uint256 _reward = arianeeMessage.readMessage(_messageId, msg.sender);
 
-      _dispatchRewardsAtRequest(_providerBrand, _reward);
+      _dispatchRewardsAtRequest(_walletProvider, _reward);
     }
 
 
