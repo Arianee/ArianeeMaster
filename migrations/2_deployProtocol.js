@@ -7,19 +7,20 @@ const ArianeeEvent = artifacts.require('ArianeeEvent');
 const ArianeeIdentity = artifacts.require('ArianeeIdentity');
 const ArianeeLost = artifacts.require('ArianeeLost');
 const ArianeeMessage = artifacts.require('ArianeeMessage');
-
-const authorizedExchangeAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
-const projectAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
-const infraAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
-const bouncerAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
-const validatorAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
+const ArianeeUpdate = artifacts.require('ArianeeUpdate')
 
 const faucetAddress = '0x68C817BfEf37b5cBb691a2d02517fb8b76e7cD47';
-const ownerAddress = '0xd03ea8624C8C5987235048901fB614fDcA89b117';
-
-const {Arianee, NETWORK} = require('@arianee/arianeejs');
 
 async function deployProtocol(deployer, network, accounts) {
+
+  const authorizedExchangeAddress = accounts[0];
+  const projectAddress = accounts[0];
+  const infraAddress = accounts[0];
+  const bouncerAddress = accounts[0];
+  const validatorAddress = accounts[0];
+  const ownerAddress = accounts[0];
+
+
   // need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(Aria);
 
@@ -29,8 +30,9 @@ async function deployProtocol(deployer, network, accounts) {
   const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address);
   const creditHistoryInstance = await deployer.deploy(CreditHistory);
   const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address);
-
   const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address);
+  const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address);
+
 
   const arianeeStoreInstance = await deployer.deploy(
     ArianeeStore,
@@ -39,13 +41,15 @@ async function deployProtocol(deployer, network, accounts) {
     creditHistoryInstance.address,
     arianeeEventInstance.address,
     messageInstance.address,
+    arianeeUpdate.address,
+    authorizedExchangeAddress,
     '10',
     '10',
     '10',
     '10'
   );
 
-  const identityInstance = await deployer.deploy(ArianeeIdentity, accounts[0], accounts[0]);
+  const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress);
 
   arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
   arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
@@ -84,7 +88,8 @@ async function deployProtocol(deployer, network, accounts) {
       'store': arianeeStoreInstance.address,
       'whitelist': whiteListInstance.address,
       'lost': arianeeLost.address,
-      'message':messageInstance.address
+      'message':messageInstance.address,
+      "update": arianeeUpdate.address
     },
     'httpProvider': 'http://localhost:8545',
     'chainId': 42
