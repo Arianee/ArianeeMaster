@@ -9,7 +9,6 @@ const ArianeeLost = artifacts.require('ArianeeLost');
 const ArianeeMessage = artifacts.require('ArianeeMessage');
 const ArianeeUpdate = artifacts.require('ArianeeUpdate')
 
-const faucetAddress = '0x68C817BfEf37b5cBb691a2d02517fb8b76e7cD47';
 
 async function deployProtocol(deployer, network, accounts) {
 
@@ -70,12 +69,6 @@ async function deployProtocol(deployer, network, accounts) {
   creditHistoryInstance.transferOwnership(ownerAddress);
 
   messageInstance.setStoreAddress(arianeeStoreInstance.address);
-  ariaInstance.transfer(faucetAddress, '100000000000000000000000');
-  web3.eth.sendTransaction({
-    from: accounts[0],
-    to: faucetAddress,
-    value: '99000000000000000000'
-  });
 
   const result = {
     'contractAdresses': {
