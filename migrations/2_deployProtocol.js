@@ -76,7 +76,7 @@ async function deployProtocol(deployer, network, accounts) {
       'creditHistory': creditHistoryInstance.address,
       'eventArianee': arianeeEventInstance.address,
       'identity': identityInstance.address,
-      'smartAsset': arianeeEventInstance.address,
+      'smartAsset': arianeeSmartAssetInstance.address,
       'staking': '',
       'store': arianeeStoreInstance.address,
       'whitelist': whiteListInstance.address,
