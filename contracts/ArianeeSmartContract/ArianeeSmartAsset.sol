@@ -89,32 +89,32 @@ Pausable
   /**
    * @dev This emits when a token is hydrated.
    */
-  event Hydrated(uint256 _tokenId, bytes32 _imprint, string _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, uint256 _tokenCreation);
+  event Hydrated(uint256 indexed _tokenId, bytes32 indexed _imprint, string _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, uint256 _tokenCreation);
 
   /**
    * @dev This emits when a issuer request a NFT recovery.
    */
-  event RecoveryRequestUpdated(uint256 _tokenId, bool _active);
+  event RecoveryRequestUpdated(uint256 indexed _tokenId, bool _active);
 
   /**
    * @dev This emits when a NFT is recovered to the issuer.
    */
-  event TokenRecovered(uint256 _token);
+  event TokenRecovered(uint256 indexed _token);
 
   /**
    * @dev This emits when a NFT's URI is udpated.
    */
-  event TokenURIUpdated(uint256 _tokenId, string URI);
+  event TokenURIUpdated(uint256 indexed _tokenId, string URI);
 
   /**
    * @dev This emits when a token access is added.
    */
-  event TokenAccessAdded(uint256 _tokenId, address _encryptedTokenKey, bool _enable, uint256 _tokenType);
+  event TokenAccessAdded(uint256 indexed _tokenId, address _encryptedTokenKey, bool _enable, uint256 _tokenType);
   
   /**
    * @dev This emits when a token access is destroyed.
    */
-  event TokenDestroyed(uint256 _tokenId);
+  event TokenDestroyed(uint256 indexed _tokenId);
   
   /**
    * @dev This emits when the uri base is udpated.
