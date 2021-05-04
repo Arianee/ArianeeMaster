@@ -193,7 +193,7 @@ Ownable, Pausable{
         emit EventDestroyDelayUpdated(_newDelay);
     }
     
-    function getEvent(uint256 _eventId) public view returns(string memory, bytes32, address, uint){
+    function getEvent(uint256 _eventId) public view returns(string memory uri, bytes32 imprint, address provider, uint timestamp){
         require(events[_eventId].provider != address(0));
         return (events[_eventId].URI, events[_eventId].imprint, events[_eventId].provider, events[_eventId].destroyLimitTimestamp);
     }
