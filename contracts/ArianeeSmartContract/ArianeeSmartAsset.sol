@@ -41,7 +41,7 @@ Pausable
   mapping(uint256 => bytes32) internal idToImprint;
 
   /**
-   * @dev Mapping from token id to recovery request bool. 
+   * @dev Mapping from token id to recovery request bool.
    */
   mapping(uint256=>bool) internal recoveryRequest;
 
@@ -49,23 +49,23 @@ Pausable
    * @dev Mapping from token id to total rewards for this NFT.
    */
   mapping(uint256=>uint256) internal rewards;
-  
+
   /**
    * @dev Mapping from token id to Cert.
    */
   mapping(uint256 => Cert) internal certificate;
-  
+
   /**
    * @dev This emits when a new address is set.
    */
   event SetAddress(string _addressType, address _newAddress);
-  
+
   struct Cert {
       address tokenIssuer;
       uint256 tokenCreationDate;
       uint256 tokenRecoveryTimestamp;
   }
-  
+
   /**
    * @dev Ability to create and hydrate NFT.
    */
@@ -110,17 +110,17 @@ Pausable
    * @dev This emits when a token access is added.
    */
   event TokenAccessAdded(uint256 indexed _tokenId, address _encryptedTokenKey, bool _enable, uint256 _tokenType);
-  
+
   /**
    * @dev This emits when a token access is destroyed.
    */
   event TokenDestroyed(uint256 indexed _tokenId);
-  
+
   /**
    * @dev This emits when the uri base is udpated.
    */
   event SetNewUriBase(string _newUriBase);
-  
+
 
   /**
    * @dev Check if the msg.sender can operate the NFT.
@@ -131,7 +131,7 @@ Pausable
     require(canOperate(_tokenId, _operator), NOT_OPERATOR);
     _;
   }
-  
+
   /**
    * @dev Check if msg.sender is the issuer of a NFT.
    * @param _tokenId ID of the NFT to test.
@@ -140,22 +140,22 @@ Pausable
     require(msg.sender == certificate[_tokenId].tokenIssuer);
     _;
    }
-  
+
   /**
     * @dev Initialize this contract. Acts as a constructor
-    * @param _arianeeWhitelistAddress Adress of the whitelist contract.
+    * @param _arianeeWhitelistAddress Address of the whitelist contract.
     */
   constructor(
     address _arianeeWhitelistAddress
   )
   public
   {
-    nftName = "Arianee Smart-Asset";
-    nftSymbol = "AriaSA";
+    nftName = "Arianee";
+    nftSymbol = "Arianee";
     setWhitelistAddress(_arianeeWhitelistAddress);
     _setUriBase("https://cert.arianee.org/");
   }
-  
+
   /**
    * @notice Change address of the store infrastructure.
    * @param _storeAddress new address of the store.
@@ -164,7 +164,7 @@ Pausable
     store = iArianeeStore(address(_storeAddress));
     emit SetAddress("storeAddress", _storeAddress);
   }
-  
+
   /**
    * @notice Reserve a NFT at the given ID.
    * @dev Has to be called through an authorized contract.
@@ -177,7 +177,7 @@ Pausable
     super._create(_to, _tokenId);
     rewards[_tokenId] = _rewards;
   }
-  
+
   /**
    * @notice Recover the NFT to the issuer.
    * @dev only if called by the issuer and if called before the token Recovery Timestamp of the NFT.
@@ -211,7 +211,7 @@ Pausable
   function validRecoveryRequest(uint256 _tokenId) external onlyOwner(){
     require(recoveryRequest[_tokenId]);
     recoveryRequest[_tokenId] = false;
-    
+
     idToApproval[_tokenId] = owner;
     _transferFrom(idToOwner[_tokenId], certificate[_tokenId].tokenIssuer, _tokenId);
 
@@ -252,7 +252,7 @@ Pausable
 
     emit TokenAccessAdded(_tokenId, _key, _enable, _tokenType);
   }
-  
+
   /**
    * @notice Transfers the ownership of a NFT to another address
    * @notice Requires to send the correct tokenKey and the NFT has to be requestable
@@ -265,13 +265,13 @@ Pausable
    * @return total rewards of this NFT.
    */
   function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() returns(uint256 reward){
-    
+
     require(isTokenValid(_tokenId, _hash, 1, _signature));
     bytes32 message = keccak256(abi.encode(_tokenId, _newOwner));
     require(ECDSA.toEthSignedMessageHash(message) == _hash);
-    
+
     idToApproval[_tokenId] = msg.sender;
-    
+
     if(!_keepRequestToken){
       tokenAccess[_tokenId][1] = address(0);
     }
@@ -279,7 +279,7 @@ Pausable
     reward = rewards[_tokenId];
     delete rewards[_tokenId];
   }
-  
+
   /**
    * @notice Destroy a token.
    * @notice Can only be called by the issuer.
@@ -299,12 +299,12 @@ Pausable
              tokenCreationDate: 0,
              tokenRecoveryTimestamp: 0
             });
-            
+
     certificate[_tokenId] = _emptyCert;
-    
+
     emit TokenDestroyed(_tokenId);
   }
-  
+
   /**
    * @notice return the URI of a NFT.
    * @param _tokenId uint256 ID of the NFT.
@@ -328,10 +328,10 @@ Pausable
   function isRequestable(uint256 _tokenId) external view returns (bool) {
     return tokenAccess[_tokenId][1] != address(0);
   }
-  
+
   /**
    * @notice The issuer address for a given Token ID.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the issuer.
    * @return Issuer address of _tokenId.
    */
@@ -339,10 +339,10 @@ Pausable
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _tokenIssuer = certificate[_tokenId].tokenIssuer;
   }
-  
+
    /**
    * @notice The imprint for a given Token ID.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the imprint.
    * @return Imprint address of _tokenId.
    */
@@ -350,11 +350,11 @@ Pausable
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _imprint = idToImprint[_tokenId];
   }
-  
-  
+
+
   /**
    * @notice The creation date for a given Token ID.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the creation date.
    * @return Creation date of _tokenId.
    */
@@ -362,10 +362,10 @@ Pausable
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _tokenCreation = certificate[_tokenId].tokenCreationDate;
   }
-  
+
   /**
    * @notice The Token Access for a given Token ID and token type.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the token access.
    * @param _tokenType for which we want the token access.
    * @return Token access of _tokenId.
@@ -374,10 +374,10 @@ Pausable
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _tokenAccess = tokenAccess[_tokenId][_tokenType];
   }
-  
+
   /**
    * @notice The recovery timestamp for a given Token ID.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the recovery timestamp.
    * @return Recovery timestamp of _tokenId.
    */
@@ -385,18 +385,18 @@ Pausable
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _tokenRecoveryTimestamp = certificate[_tokenId].tokenRecoveryTimestamp;
   }
-  
+
   /**
    * @notice The recovery timestamp for a given Token ID.
-   * @dev Throws if `_tokenId` is not a valid NFT. 
+   * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the recovery timestamp.
    * @return Recovery timestamp of _tokenId.
    */
   function recoveryRequestOpen(uint256 _tokenId) external view returns(bool _recoveryRequest){
       require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
       _recoveryRequest = recoveryRequest[_tokenId];
-  }  
-  
+  }
+
   /**
    * @notice The rewards for a given Token ID.
    * @param _tokenId Id for which we want the rewards.
@@ -405,7 +405,7 @@ Pausable
   function getRewards(uint256 _tokenId) external view returns(uint256){
       return rewards[_tokenId];
   }
-  
+
   /**
    * @notice Check if an operator is valid for a given NFT.
    * @param _tokenId nft to check.
@@ -425,7 +425,7 @@ Pausable
       _setUriBase(_newURIBase);
       emit SetNewUriBase(_newURIBase);
   }
-  
+
   /**
    * @notice Change address of the whitelist.
    * @param _whitelistAddres new address of the whitelist.
@@ -452,19 +452,19 @@ Pausable
     tokenAccess[_tokenId][0] = _initialKey;
     idToImprint[_tokenId] = _imprint;
     idToUri[_tokenId] = _uri;
-    
+
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _owner);
 
     if (_initialKeyIsRequestKey) {
       tokenAccess[_tokenId][1] = _initialKey;
     }
-    
+
     Cert memory _cert = Cert({
              tokenIssuer : _owner,
              tokenCreationDate: _tokenCreation,
              tokenRecoveryTimestamp :_tokenRecoveryTimestamp
             });
-            
+
     certificate[_tokenId] = _cert;
 
     emit Hydrated(_tokenId, _imprint, _uri, _initialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _tokenCreation);
@@ -491,6 +491,6 @@ Pausable
     super._transferFrom(_to, _from, _tokenId);
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _to);
   }
-  
+
 }
 
