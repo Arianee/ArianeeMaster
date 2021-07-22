@@ -7,7 +7,8 @@ const ArianeeEvent = artifacts.require('ArianeeEvent');
 const ArianeeIdentity = artifacts.require('ArianeeIdentity');
 const ArianeeLost = artifacts.require('ArianeeLost');
 const ArianeeMessage = artifacts.require('ArianeeMessage');
-const ArianeeUpdate = artifacts.require('ArianeeUpdate')
+const ArianeeUpdate = artifacts.require('ArianeeUpdate');
+const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 
 
 async function deployProtocol(deployer, network, accounts) {
@@ -31,6 +32,7 @@ async function deployProtocol(deployer, network, accounts) {
   const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address);
   const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address);
   const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address);
+  const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address);
 
 
   const arianeeStoreInstance = await deployer.deploy(
@@ -54,14 +56,17 @@ async function deployProtocol(deployer, network, accounts) {
   arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
   arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
   arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
+  arianeeStoreInstance.setAriaUSDExchange(10);
 
   arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
   creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
   arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
+  arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
 
   arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
   whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
   whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
+  whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
 
   arianeeEventInstance.transferOwnership(ownerAddress);
   arianeeStoreInstance.transferOwnership(ownerAddress);
@@ -82,7 +87,8 @@ async function deployProtocol(deployer, network, accounts) {
       'whitelist': whiteListInstance.address,
       'lost': arianeeLost.address,
       'message':messageInstance.address,
-      "update": arianeeUpdate.address
+      "userAction":arianeeUserAction.address,
+      "updateSmartAssets": arianeeUpdate.address
     },
     'httpProvider': 'http://localhost:8545',
     'chainId': 42
