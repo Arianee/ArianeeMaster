@@ -1,6 +1,9 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
+
+pragma solidity 0.8.0;
+
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
 /**
  * @title Pausable
  * @dev Base contract which allows children to implement an emergency stop mechanism.

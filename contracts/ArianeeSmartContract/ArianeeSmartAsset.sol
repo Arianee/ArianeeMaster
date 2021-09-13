@@ -1,29 +1,34 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
 
-contract iArianeeWhitelist {
-  function addWhitelistedAddress(uint256 _tokenId, address _address) external;
-}
-
-
-contract iArianeeStore{
-    function canTransfer(address _to,address _from,uint256 _tokenId) external returns(bool);
-    function canDestroy(uint256 _tokenId, address _sender) external returns(bool);
-}
+pragma solidity ^0.8.0;
 
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/abilitable.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "./Pausable.sol";
 import "./ECDSA.sol";
-import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
+
+import "./ERC721Tradable.sol";
+
+abstract contract iArianeeWhitelist {
+  function addWhitelistedAddress(uint256 _tokenId, address _address) virtual external;
+}
+
+
+abstract contract iArianeeStore{
+    function canTransfer(address _to,address _from,uint256 _tokenId) virtual external returns(bool);
+    function canDestroy(uint256 _tokenId, address _sender) virtual external returns(bool);
+}
+
+
 
 /// @title Contract handling Arianee Certificates.
-contract ArianeeSmartAsset is
-NFTokenMetadataEnumerable,
-Abilitable,
-Ownable,
-Pausable
+
+contract ArianeeSmartAsset is ERC721Tradable, Abilitable
 {
+    
+  /**
+   * @dev Base URI
+   */
+  string internal URIBase; 
 
   /**
    * @dev Mapping from token id to URI.
@@ -146,14 +151,17 @@ Pausable
     * @param _arianeeWhitelistAddress Address of the whitelist contract.
     */
   constructor(
-    address _arianeeWhitelistAddress
-  )
-  public
+    address _arianeeWhitelistAddress,
+    address _proxyRegistryAddress
+  )         ERC721Tradable("Arianee", "Arianee", _proxyRegistryAddress)
+
+  
   {
-    nftName = "Arianee";
-    nftSymbol = "Arianee";
+
     setWhitelistAddress(_arianeeWhitelistAddress);
-    _setUriBase("https://cert.arianee.org/");
+    setUriBase("https://cert.arianee.org/");
+
+    proxyRegistryAddress = address(0x58807baD0B376efc12F5AD86aAc70E78ed67deaE);
   }
 
   /**
@@ -174,7 +182,7 @@ Pausable
    * @param _rewards total rewards of this NFT.
    */
   function reserveToken(uint256 _tokenId, address _to, uint256 _rewards) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
-    super._create(_to, _tokenId);
+    super._mint(_to, _tokenId);
     rewards[_tokenId] = _rewards;
   }
 
@@ -185,8 +193,8 @@ Pausable
    */
   function recoverTokenToIssuer(uint256 _tokenId) external whenNotPaused() isIssuer(_tokenId) {
     require(block.timestamp < certificate[_tokenId].tokenRecoveryTimestamp);
-    idToApproval[_tokenId] = certificate[_tokenId].tokenIssuer;
-    _transferFrom(idToOwner[_tokenId], certificate[_tokenId].tokenIssuer, _tokenId);
+    _approve(certificate[_tokenId].tokenIssuer,  _tokenId);
+    _transferFrom(ownerOf(_tokenId), certificate[_tokenId].tokenIssuer, _tokenId);
 
     emit TokenRecovered(_tokenId);
   }
@@ -212,8 +220,9 @@ Pausable
     require(recoveryRequest[_tokenId]);
     recoveryRequest[_tokenId] = false;
 
-    idToApproval[_tokenId] = owner;
-    _transferFrom(idToOwner[_tokenId], certificate[_tokenId].tokenIssuer, _tokenId);
+    _approve(owner(),  _tokenId);
+    
+    _transferFrom(ownerOf(_tokenId), certificate[_tokenId].tokenIssuer, _tokenId);
 
     emit RecoveryRequestUpdated(_tokenId, false);
     emit TokenRecovered(_tokenId);
@@ -226,7 +235,7 @@ Pausable
    * @param _uri New URI for the certificate.
    */
   function updateTokenURI(uint256 _tokenId, string calldata _uri) external isIssuer(_tokenId) whenNotPaused() {
-    require(idToOwner[_tokenId] != address(0), NOT_VALID_CERT);
+    require(ownerOf(_tokenId) != address(0), NOT_VALID_CERT);
     idToUri[_tokenId] = _uri;
 
     emit TokenURIUpdated(_tokenId, _uri);
@@ -239,7 +248,6 @@ Pausable
    * @param _key Public address of the token to encode the hash with.
    * @param _enable Enable or disable the token access.
    * @param _tokenType Type of token access (0=view, 1=tranfer).
-   * @return true.
    */
   function addTokenAccess(uint256 _tokenId, address _key, bool _enable, uint256 _tokenType) external isOperator(_tokenId, msg.sender) whenNotPaused() {
       require(_tokenType>0);
@@ -262,7 +270,6 @@ Pausable
    * @param _hash Hash of tokenId + newOwner address.
    * @param _keepRequestToken If false erase the access token of the NFT.
    * @param _newOwner Address of the new owner of the NFT.
-   * @return total rewards of this NFT.
    */
   function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() returns(uint256 reward){
 
@@ -270,12 +277,12 @@ Pausable
     bytes32 message = keccak256(abi.encode(_tokenId, _newOwner));
     require(ECDSA.toEthSignedMessageHash(message) == _hash);
 
-    idToApproval[_tokenId] = msg.sender;
+    _approve(msg.sender,  _tokenId);
 
     if(!_keepRequestToken){
       tokenAccess[_tokenId][1] = address(0);
     }
-    _transferFrom(idToOwner[_tokenId], _newOwner, _tokenId);
+    _transferFrom(ownerOf(_tokenId), _newOwner, _tokenId);
     reward = rewards[_tokenId];
     delete rewards[_tokenId];
   }
@@ -288,7 +295,7 @@ Pausable
   function destroy(uint256 _tokenId) external whenNotPaused() {
     require(store.canDestroy(_tokenId, msg.sender));
 
-    _destroy(_tokenId);
+    _burn(_tokenId);
     idToImprint[_tokenId] = "";
     idToUri[_tokenId] = "";
     tokenAccess[_tokenId][0] = address(0);
@@ -306,21 +313,6 @@ Pausable
   }
 
   /**
-   * @notice return the URI of a NFT.
-   * @param _tokenId uint256 ID of the NFT.
-   * @return URI of the NFT.
-   */
-  function tokenURI(uint256 _tokenId) external view returns (string memory){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_CERT);
-      if(bytes(idToUri[_tokenId]).length > 0){
-        return idToUri[_tokenId];
-      }
-      else{
-          return string(abi.encodePacked(uriBase, _uint2str(_tokenId)));
-      }
-  }
-
-  /**
    * @notice Check if a token is requestable.
    * @param _tokenId uint256 ID of the token to check.
    * @return True if the NFT is requestable.
@@ -333,10 +325,10 @@ Pausable
    * @notice The issuer address for a given Token ID.
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the issuer.
-   * @return Issuer address of _tokenId.
+   * @return _tokenIssuer Issuer address of _tokenIssuer.
    */
   function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _tokenIssuer = certificate[_tokenId].tokenIssuer;
   }
 
@@ -344,10 +336,10 @@ Pausable
    * @notice The imprint for a given Token ID.
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the imprint.
-   * @return Imprint address of _tokenId.
+   * @return _imprint Imprint address of _tokenId.
    */
   function tokenImprint(uint256 _tokenId) external view returns(bytes32 _imprint){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _imprint = idToImprint[_tokenId];
   }
 
@@ -356,10 +348,10 @@ Pausable
    * @notice The creation date for a given Token ID.
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the creation date.
-   * @return Creation date of _tokenId.
+   * @return _tokenCreation Creation date of _tokenId.
    */
   function tokenCreation(uint256 _tokenId) external view returns(uint256 _tokenCreation){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _tokenCreation = certificate[_tokenId].tokenCreationDate;
   }
 
@@ -368,10 +360,10 @@ Pausable
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the token access.
    * @param _tokenType for which we want the token access.
-   * @return Token access of _tokenId.
+   * @return _tokenAccess Token access of _tokenId.
    */
   function tokenHashedAccess(uint256 _tokenId, uint256 _tokenType) external view returns(address _tokenAccess){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _tokenAccess = tokenAccess[_tokenId][_tokenType];
   }
 
@@ -379,10 +371,10 @@ Pausable
    * @notice The recovery timestamp for a given Token ID.
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the recovery timestamp.
-   * @return Recovery timestamp of _tokenId.
+   * @return _tokenRecoveryTimestamp Recovery timestamp of _tokenId.
    */
   function tokenRecoveryDate(uint256 _tokenId) external view returns(uint256 _tokenRecoveryTimestamp){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _tokenRecoveryTimestamp = certificate[_tokenId].tokenRecoveryTimestamp;
   }
 
@@ -390,10 +382,10 @@ Pausable
    * @notice The recovery timestamp for a given Token ID.
    * @dev Throws if `_tokenId` is not a valid NFT.
    * @param _tokenId Id for which we want the recovery timestamp.
-   * @return Recovery timestamp of _tokenId.
+   * @return _recoveryRequest Recovery timestamp of _tokenId.
    */
   function recoveryRequestOpen(uint256 _tokenId) external view returns(bool _recoveryRequest){
-      require(idToOwner[_tokenId] != address(0), NOT_VALID_NFT);
+      require(ownerOf(_tokenId) != address(0), 'NOT_VALID_NFT');
       _recoveryRequest = recoveryRequest[_tokenId];
   }
 
@@ -413,8 +405,8 @@ Pausable
    * @return true if operator is valid.
    */
   function canOperate(uint256 _tokenId, address _operator) public view returns (bool){
-    address tokenOwner = idToOwner[_tokenId];
-    return tokenOwner == _operator || ownerToOperators[tokenOwner][_operator];
+    address tokenOwner = ownerOf(_tokenId);
+    return tokenOwner == _operator || isApprovedForAll(tokenOwner,_operator);
   }
 
   /**
@@ -422,9 +414,21 @@ Pausable
    * @param _newURIBase the new URI base address.
    */
   function setUriBase(string memory _newURIBase) public onlyOwner(){
-      _setUriBase(_newURIBase);
-      emit SetNewUriBase(_newURIBase);
+      URIBase = _newURIBase;
+      
+      emit SetNewUriBase(URIBase);
   }
+
+  /**
+   * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
+   * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
+   * by default, can be overriden in child contracts.
+   */
+  function baseTokenURI() override public view returns (string memory) {
+      return URIBase;
+  }
+  
+
 
   /**
    * @notice Change address of the whitelist.
@@ -488,9 +492,19 @@ Pausable
    */
   function _transferFrom(address _to, address _from, uint256 _tokenId) internal {
     require(store.canTransfer(_to, _from, _tokenId));
-    super._transferFrom(_to, _from, _tokenId);
+    super.transferFrom(_to, _from, _tokenId);
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _to);
   }
+
+
+  /**
+   * @notice Change address of the proxyRegistryAddress.
+   * @param _proxyRegistryAddress new address of the whitelist.
+   */
+  function setProxyRegistryAddress(address _proxyRegistryAddress) public onlyOwner(){
+    proxyRegistryAddress = _proxyRegistryAddress;
+    emit SetAddress("proxyRegistryAddress", proxyRegistryAddress);
+  }    
 
 }
 

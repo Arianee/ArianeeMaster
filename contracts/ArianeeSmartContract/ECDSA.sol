@@ -1,4 +1,7 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+
+
+pragma solidity 0.8.0;
 
 /**
  * @dev Elliptic Curve Digital Signature Algorithm (ECDSA) operations.
