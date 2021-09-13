@@ -25,6 +25,13 @@ abstract contract iArianeeStore{
 contract ArianeeSmartAsset is ERC721Tradable, Abilitable
 {
     
+    
+
+  /**
+   * @dev Contract Base URI
+   */
+  string internal contractURIBase;     
+    
   /**
    * @dev Base URI
    */
@@ -152,17 +159,28 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
     */
   constructor(
     address _arianeeWhitelistAddress,
-    address _proxyRegistryAddress
+    address _proxyRegistryAddress,
+    string memory _contractURIBase
   )         ERC721Tradable("Arianee", "Arianee", _proxyRegistryAddress)
 
   
   {
+
+    contractURIBase = _contractURIBase;
 
     setWhitelistAddress(_arianeeWhitelistAddress);
     setUriBase("https://cert.arianee.org/");
 
     proxyRegistryAddress = address(0x58807baD0B376efc12F5AD86aAc70E78ed67deaE);
   }
+  
+  /**
+   * @notice Change address of the store infrastructure.
+   * @return contractUri.
+   */ 
+  function contractURI() public view returns (string memory) {
+    return contractURIBase;
+  }  
 
   /**
    * @notice Change address of the store infrastructure.
