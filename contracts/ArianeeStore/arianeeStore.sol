@@ -1,72 +1,74 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.0;
 
 /**
  * @title Interface for contracts conforming to ERC-20
  */
-contract ERC20Interface {
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function balanceOf(address owner) public view returns (uint256);
+abstract contract ERC20Interface {
+    function transferFrom(address from, address to, uint tokens) virtual public returns (bool success);
+    function transfer(address to, uint tokens) virtual public returns (bool success);
+    function balanceOf(address owner) virtual public view returns (uint256);
 }
 
 
 /**
  * @title Interface for contracts conforming to ERC-721
  */
-contract ERC721Interface {
-    function reserveToken(uint256 id, address _to, uint256 _rewards) external;
-    function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _encryptedInitialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) public returns(uint256);
-    function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external returns(uint256);
-    function getRewards(uint256 _tokenId) external view returns(uint256);
+abstract contract ERC721Interface {
+    function reserveToken(uint256 id, address _to, uint256 _rewards) virtual external;
+    function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _encryptedInitialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) virtual public returns(uint256);
+    function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) virtual external returns(uint256);
+    function getRewards(uint256 _tokenId) virtual external view returns(uint256);
 }
 
 
 /**
  * @title Interface to interact with ArianneCreditHistory
  */
-contract iArianeeCreditHistory {
-    function addCreditHistory(address _spender, uint256 _price, uint256 _quantity, uint256 _type) external;
-    function consumeCredits(address _spender, uint256 _type, uint256 _quantity) external returns(uint256);
-    function arianeeStoreAddress() external returns(address);
+abstract contract iArianeeCreditHistory {
+    function addCreditHistory(address _spender, uint256 _price, uint256 _quantity, uint256 _type) virtual external;
+    function consumeCredits(address _spender, uint256 _type, uint256 _quantity) virtual external returns(uint256);
+    function arianeeStoreAddress() virtual external returns(address);
 }
 
 /**
  * @title Interface to interact with ArianeeEvent
  */
- contract iArianeeEvent{
-     function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public;
-     function accept(uint256 _eventId, address _owner) public returns(uint256);
-     function refuse(uint256 _eventId, address _owner) public returns(uint256);
- }
+abstract contract iArianeeEvent{
+    function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) virtual public;
+    function accept(uint256 _eventId, address _owner) virtual public returns(uint256);
+    function refuse(uint256 _eventId, address _owner) virtual public returns(uint256);
+}
 
 
 /**
  * @title Interface to interact with ArianeeMessage
  */
-contract iArianeeMessage{
-  function readMessage(uint256 _messageId, address _from) public returns (uint256);
-  function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public;
+abstract contract iArianeeMessage{
+  function readMessage(uint256 _messageId, address _from) virtual public returns (uint256);
+  function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) virtual public;
 }
 
 /**
  * @title Interface to interact with ArianeeUpdate
  */
-contract iArianeeUpdate{
-  function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _issuer, uint256 _reward) external;
-  function readUpdateSmartAsset(uint256 _tokenId, address _from) external returns(uint256);
+abstract contract iArianeeUpdate{
+  function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _issuer, uint256 _reward) virtual external;
+  function readUpdateSmartAsset(uint256 _tokenId, address _from) virtual external returns(uint256);
 }
 
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
-import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
-import "@0xcert/ethereum-erc20-contracts/src/contracts/token.sol";
+import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 import "./Pausable.sol";
 
 /// @title Contract managing the Arianee economy.
 contract ArianeeStore is Pausable {
     using SafeMath for uint256;
-    using AddressUtils for address;
+    using Address for address;
 
     /**
      * Interface for all the connected contracts.
@@ -153,7 +155,6 @@ contract ArianeeStore is Pausable {
         uint256 _creditPricesUSD2,
         uint256 _creditPricesUSD3
     )
-    public
     {
         acceptedToken = ERC20Interface(address(_acceptedToken));
         nonFungibleRegistry = ERC721Interface(address(_nonFungibleRegistry));
@@ -430,7 +431,7 @@ contract ArianeeStore is Pausable {
     /**
      * @notice The USD credit price per type.
      * @param _creditType for which we want the USD price.
-     * @return price in USD.
+     * @return _creditPriceUSD price in USD.
      */
     function creditPriceUSD(uint256 _creditType) external view returns(uint256 _creditPriceUSD) {
         _creditPriceUSD = creditPricesUSD[_creditType];
@@ -439,7 +440,7 @@ contract ArianeeStore is Pausable {
     /**
      * @notice dispatch for rewards.
      * @param _receiver for which we want the % of rewards.
-     * @return % of rewards.
+     * @return _percent % of rewards.
      */
     function percentOfDispatch(uint8 _receiver) external view returns(uint8 _percent){
         _percent = dispatchPercent[_receiver];

@@ -4,6 +4,4 @@ build/
 .idea/
 truffle.js
 .deps
-contracts/ArianeeSmartContract/artifacts/
-
-contracts/ArianeeSmartContract/common/meta-transactions/artifacts/
+contracts/*/artifacts/
