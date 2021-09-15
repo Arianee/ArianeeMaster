@@ -1,21 +1,23 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.0;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 
 /**
  * @title Interface for contracts conforming to ERC-721
  */
-contract ERC721Interface {
-    function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer);
-    function tokenImprint(uint256 _tokenId) external view returns(bytes32 _imprint);
-    function canOperate(uint256 _tokenId, address _operator) public returns(bool);
+abstract contract ERC721Interface {
+    function issuerOf(uint256 _tokenId) virtual external view returns(address _tokenIssuer);
+    function tokenImprint(uint256 _tokenId) virtual external view returns(bytes32 _imprint);
+    function canOperate(uint256 _tokenId, address _operator) virtual public returns(bool);
 }
 
 contract ArianeeUpdate is
 Ownable {
 
   /**
-   * Interface for connected contract.
+   * @dev Interface for connected contract.
    */
   ERC721Interface smartAsset;
 
@@ -43,7 +45,7 @@ Ownable {
         uint256 updateTimestamp;
     }
 
-  constructor(address _smartAssetAddress) public{
+  constructor(address _smartAssetAddress) {
       smartAsset = ERC721Interface(address(_smartAssetAddress));
   }
 

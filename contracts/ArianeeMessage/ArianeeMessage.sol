@@ -1,13 +1,14 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.0;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 
-contract iArianeeWhitelist{
-    function isAuthorized(uint256 _tokenId, address _sender, address _tokenOwner) public view returns(bool);
+abstract contract iArianeeWhitelist{
+    function isAuthorized(uint256 _tokenId, address _sender, address _tokenOwner) virtual public view returns(bool);
 }
 
-contract ERC721Interface {
-    function ownerOf(uint256 _tokenId) public view returns(address);
+abstract contract ERC721Interface {
+    function ownerOf(uint256 _tokenId) virtual public view returns(address);
 }
 
 
@@ -46,7 +47,7 @@ contract ArianeeMessage is Ownable{
   event MessageRead(address indexed _receiver, address indexed _sender, uint256 indexed _messageId);
 
 
-  constructor(address _whitelistAddress, address _smartAssetAddress) public{
+  constructor(address _whitelistAddress, address _smartAssetAddress) {
         whitelist = iArianeeWhitelist(address(_whitelistAddress));
         smartAsset = ERC721Interface(address(_smartAssetAddress));
     }

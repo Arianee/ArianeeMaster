@@ -1,7 +1,8 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.0;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
+import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 contract ArianeeCreditHistory is
 Ownable
@@ -99,7 +100,8 @@ Ownable
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
    * @param _index of the credit for which we want the history.
-   * @return Credit history.
+   * @return _price credit price for this purchase.
+   * * @return _quantity credit quantity for this purchase.
    */
   function userCreditHistory(address _spender, uint256 _type, uint256 _index) external view returns (uint256 _price, uint256 _quantity) {
       _price = creditHistory[_spender][_type][_index].price;
@@ -110,7 +112,7 @@ Ownable
    * @notice Get the actual index for a spender and a credit type.
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
-   * @return Current index.
+   * @return _historyIndex Current index.
    */
   function userIndex(address _spender, uint256 _type) external view returns(uint256 _historyIndex){
       _historyIndex = historyIndex[_spender][_type];
@@ -120,7 +122,7 @@ Ownable
    * @notice Give the total balance of credit for a spender.
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
-   * @return Balance of the spender.
+   * @return _totalCredits Balance of the spender.
    */
   function balanceOf(address _spender, uint256 _type) external view returns(uint256 _totalCredits){
       _totalCredits = totalCredits[_spender][_type];

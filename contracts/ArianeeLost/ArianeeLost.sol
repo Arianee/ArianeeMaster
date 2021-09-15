@@ -1,7 +1,8 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.0;
 
-contract iSmartAsset{
-    function ownerOf(uint256 _tokenId) external returns (address _owner);
+abstract contract iSmartAsset{
+    function ownerOf(uint256 _tokenId) virtual external returns (address _owner);
 }
 
 contract ArianeeLost{
@@ -17,7 +18,7 @@ contract ArianeeLost{
      /**
       * @param _smartAssetAddress address of SmartAssetContract
       */
-    constructor(address _smartAssetAddress) public {
+    constructor(address _smartAssetAddress) {
         smartAsset =iSmartAsset(_smartAssetAddress);
     }
 

@@ -1,20 +1,22 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.0;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/abilitable.sol";
 
-contract iArianeeWhitelist{
-  function addWhitelistedAddress(uint256 _tokenId, address _address) external ;
+abstract contract iArianeeWhitelist{
+  function addWhitelistedAddress(uint256 _tokenId, address _address) virtual external ;
 }
 
-contract ERC721Interface {
-  function ownerOf(uint256 _tokenId) public view returns(address);
+abstract contract ERC721Interface {
+  function ownerOf(uint256 _tokenId) virtual public view returns(address);
 }
 
 contract ArianeeUserAction{
   iArianeeWhitelist whitelist;
   ERC721Interface smartAsset;
 
-  constructor(address _whitelistAddress, address _smartAssetAddress) public{
+  constructor(address _whitelistAddress, address _smartAssetAddress) {
     whitelist = iArianeeWhitelist(address(_whitelistAddress));
     smartAsset = ERC721Interface(address(_smartAssetAddress));
   }

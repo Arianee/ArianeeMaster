@@ -1,23 +1,24 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.0;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
+import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 import "./Pausable.sol";
 
-contract ERC721Interface {
-    function canOperate(uint256 _tokenId, address _operator) public returns(bool);
-    function isTokenValid(uint256 _tokenId, bytes32 _hash, uint256 _tokenType, bytes memory _signature) public view returns (bool);
-    function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer);
-    function tokenCreation(uint256 _tokenId) external view returns(uint256);
+abstract contract ERC721Interface {
+    function canOperate(uint256 _tokenId, address _operator)virtual public returns(bool);
+    function isTokenValid(uint256 _tokenId, bytes32 _hash, uint256 _tokenType, bytes memory _signature) virtual public view returns (bool);
+    function issuerOf(uint256 _tokenId) virtual external view returns(address _tokenIssuer);
+    function tokenCreation(uint256 _tokenId) virtual external view returns(uint256);
 }
 
-contract iArianeeWhitelist {
-    function addWhitelistedAddress(uint256 _tokenId, address _address) public;
+abstract contract iArianeeWhitelist {
+    function addWhitelistedAddress(uint256 _tokenId, address _address) virtual public;
 }
 
 contract ArianeeEvent is
 Ownable, Pausable{
-    
     using SafeMath for uint256;
     
     address arianeeStoreAddress;
@@ -43,7 +44,9 @@ Ownable, Pausable{
     
     mapping(uint256 => bool) destroyRequest;
     
-    /// Event list    
+    /** 
+     * @dev Event list    
+     */
     mapping(uint256 => Event) internal events;
     //Event[] public events;
     
@@ -78,7 +81,7 @@ Ownable, Pausable{
     }
     
     
-    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) public{
+    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress){
         arianeeWhitelist = iArianeeWhitelist(address(_arianeeWhitelistAddress));
         smartAsset = ERC721Interface(address(_smartAssetAddress));
     }
@@ -92,6 +95,7 @@ Ownable, Pausable{
         arianeeStoreAddress = _storeAddress;
     }
     
+    
     /**
      * @dev create a new event linked to a nft
      * @notice can only be called through the store.
@@ -100,7 +104,6 @@ Ownable, Pausable{
      * @param _uri uri of the JSON of the service.
      * @param _reward total rewards of this event.
      * @param _provider address of the event provider.
-     * @return the id of the service.
      */
     function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, uint256 _reward, address _provider) external onlyStore() whenNotPaused() {
         require(smartAsset.tokenCreation(_tokenId)>0);
@@ -115,8 +118,9 @@ Ownable, Pausable{
         
         events[_eventId] = _event;
         
-        uint256 length = pendingEvents[_tokenId].push(_eventId);
-        idToPendingEvents[_eventId] = length - 1; 
+        pendingEvents[_tokenId].push(_eventId);
+        uint256 length = pendingEvents[_tokenId].length;
+        idToPendingEvents[_eventId] = length.sub(1);
         
         eventIdToToken[_eventId] = _tokenId;
         
@@ -124,6 +128,7 @@ Ownable, Pausable{
         
         emit EventCreated(_tokenId, _eventId, _imprint, _uri, _provider);
     }
+    
     
     /**
      * @dev Accept an event so it can be concidered as valid.
@@ -134,7 +139,7 @@ Ownable, Pausable{
         
         uint256 _tokenId = eventIdToToken[_eventId];
         uint256 pendingEventToRemoveIndex = idToPendingEvents[_eventId];
-        uint256 lastPendingIndex = pendingEvents[_tokenId].length - 1;
+        uint256 lastPendingIndex = pendingEvents[_tokenId].length.add(1);
         
         if(lastPendingIndex != pendingEventToRemoveIndex){
             uint256 lastPendingEvent = pendingEvents[_tokenId][lastPendingIndex];
@@ -142,11 +147,12 @@ Ownable, Pausable{
             idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
         }
         
-        pendingEvents[_tokenId].length--;
+        pendingEvents[_tokenId].length.sub(1);
         delete idToPendingEvents[_eventId];
         
-        uint256 length = tokenEventsList[_tokenId].push(_eventId);
-        idToTokenEventIndex[_eventId] = length - 1;
+        tokenEventsList[_tokenId].push(_eventId);
+        uint256 length = tokenEventsList[_tokenId].length;
+        idToTokenEventIndex[_eventId] = length.sub(1);
         
         arianeeWhitelist.addWhitelistedAddress(_tokenId, events[_eventId].provider);
         uint256 reward = rewards[_eventId];
@@ -211,7 +217,7 @@ Ownable, Pausable{
             idToTokenEventIndex[lastEvent] = eventIdToRemove;
         }
         
-        tokenEventsList[_tokenId].length--;
+        tokenEventsList[_tokenId].length.sub(1);
         delete idToTokenEventIndex[_eventId];
         delete eventIdToToken[_eventId];
         delete events[_eventId];
@@ -232,7 +238,7 @@ Ownable, Pausable{
             idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
         }
         
-        pendingEvents[_tokenId].length--;
+        pendingEvents[_tokenId].length.sub(1);
         
         delete idToPendingEvents[_eventId];
         delete eventIdToToken[_eventId];
