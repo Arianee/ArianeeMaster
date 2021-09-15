@@ -19,6 +19,7 @@ async function deployProtocol(deployer, network, accounts) {
   const bouncerAddress = accounts[0];
   const validatorAddress = accounts[0];
   const ownerAddress = accounts[0];
+  const lostManager = accounts[0];
 
 
   // need to deploy as blank, otherwise it is not working with ganache cli
@@ -30,7 +31,7 @@ async function deployProtocol(deployer, network, accounts) {
   const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address);
   const creditHistoryInstance = await deployer.deploy(CreditHistory);
   const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address);
-  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address);
+  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address, lostManager);
   const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address);
   const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address);
 
