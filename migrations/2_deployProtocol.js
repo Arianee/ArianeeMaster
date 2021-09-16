@@ -19,14 +19,16 @@ async function deployProtocol(deployer, network, accounts) {
   const bouncerAddress = accounts[0];
   const validatorAddress = accounts[0];
   const ownerAddress = accounts[0];
+  const lostManager = accounts[0];
+  const contractURI = "https://cert.arianee.org/arianee-opensea.json"
 
 
   // need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(Aria);
 
-  const ariaInstance = await deployer.deploy(Aria);
+  const ariaInstance = {address:"0x46F48FbdedAa6F5500993BEDE9539ef85F4BeE8e"}
   const whiteListInstance = await deployer.deploy(Whitelist);
-  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address);
+  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, contractURI);
   const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address);
   const creditHistoryInstance = await deployer.deploy(CreditHistory);
   const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address);
