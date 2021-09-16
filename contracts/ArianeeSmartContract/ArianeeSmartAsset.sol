@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.0;
 
 
@@ -24,21 +23,11 @@ abstract contract iArianeeStore{
 
 contract ArianeeSmartAsset is ERC721Tradable, Abilitable
 {
-    
+
   /**
    * @dev Contract Base URI
    */
-  string internal contractURIBase;     
-    
-  /**
-   * @dev Base URI
-   */
-  string internal URIBase; 
-
-  /**
-   * @dev Mapping from token id to URI.
-   */
-  mapping(uint256 => string) internal idToUri;
+  string internal contractURIBase;
 
   /**
    * @dev Mapping from token id to Token Access (0=view, 1=transfer).
@@ -86,7 +75,6 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
    */
   string constant CAPABILITY_NOT_SUPPORTED = "007001";
   string constant TRANSFERS_DISABLED = "007002";
-  string constant NOT_VALID_CERT = "007003";
   string constant NFT_ALREADY_SET = "007006";
   string constant NOT_OPERATOR = "007004";
 
@@ -126,10 +114,7 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
    */
   event TokenDestroyed(uint256 indexed _tokenId);
 
-  /**
-   * @dev This emits when the uri base is udpated.
-   */
-  event SetNewUriBase(string _newUriBase);
+
 
 
   /**
@@ -158,23 +143,22 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
   constructor(
     address _arianeeWhitelistAddress,
     string memory _contractURIBase
-  )         ERC721Tradable("Arianee", "Arianee", 0x58807baD0B376efc12F5AD86aAc70E78ed67deaE)
+  )         ERC721Tradable("Arianee", "Arianee")
   {
 
     contractURIBase = _contractURIBase;
 
     setWhitelistAddress(_arianeeWhitelistAddress);
-    setUriBase("https://cert.arianee.org/");
 
   }
-  
+
   /**
    * @notice Change address of the store infrastructure.
    * @return contractUri.
-   */ 
+   */
   function contractURI() public view returns (string memory) {
     return contractURIBase;
-  }  
+  }
 
   /**
    * @notice Change address of the store infrastructure.
@@ -233,25 +217,14 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
     recoveryRequest[_tokenId] = false;
 
     _approve(owner(),  _tokenId);
-    
+
     _transferFrom(ownerOf(_tokenId), certificate[_tokenId].tokenIssuer, _tokenId);
 
     emit RecoveryRequestUpdated(_tokenId, false);
     emit TokenRecovered(_tokenId);
   }
 
-  /**
-   * @notice External function to update the tokenURI.
-   * @notice Can only be called by the NFT's issuer.
-   * @param _tokenId ID of the NFT to edit.
-   * @param _uri New URI for the certificate.
-   */
-  function updateTokenURI(uint256 _tokenId, string calldata _uri) external isIssuer(_tokenId) whenNotPaused() {
-    require(ownerOf(_tokenId) != address(0), NOT_VALID_CERT);
-    idToUri[_tokenId] = _uri;
 
-    emit TokenURIUpdated(_tokenId, _uri);
-  }
 
   /**
    * @notice Add a token access to a NFT.
@@ -410,6 +383,8 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
       return rewards[_tokenId];
   }
 
+
+
   /**
    * @notice Check if an operator is valid for a given NFT.
    * @param _tokenId nft to check.
@@ -421,25 +396,8 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
     return tokenOwner == _operator || isApprovedForAll(tokenOwner,_operator);
   }
 
-  /**
-   * @notice Change the base URI address.
-   * @param _newURIBase the new URI base address.
-   */
-  function setUriBase(string memory _newURIBase) public onlyOwner(){
-      URIBase = _newURIBase;
-      
-      emit SetNewUriBase(URIBase);
-  }
 
-  /**
-   * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-   * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
-   * by default, can be overriden in child contracts.
-   */
-  function baseTokenURI() override public view returns (string memory) {
-      return URIBase;
-  }
-  
+
 
 
   /**
@@ -462,7 +420,9 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
    * @param _tokenRecoveryTimestamp Limit date for the issuer to be able to transfer back the NFT.
    * @param _initialKeyIsRequestKey If true set initial key as request key.
    */
-  function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) public hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() isOperator(_tokenId, _owner) returns(uint256){
+  function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner)
+  public hasAbilities(ABILITY_CREATE_ASSET)
+  whenNotPaused() isOperator(_tokenId, _owner) returns(uint256){
     require(!(certificate[_tokenId].tokenCreationDate > 0), NFT_ALREADY_SET);
     uint256 _tokenCreation = block.timestamp;
     tokenAccess[_tokenId][0] = _initialKey;
@@ -510,13 +470,18 @@ contract ArianeeSmartAsset is ERC721Tradable, Abilitable
 
 
   /**
-   * @notice Change address of the proxyRegistryAddress.
-   * @param _proxyRegistryAddress new address of the whitelist.
+   * @notice External function to update the tokenURI.
+   * @notice Can only be called by the NFT's issuer.
+   * @param _tokenId ID of the NFT to edit.
+   * @param _uri New URI for the certificate.
    */
-  function setProxyRegistryAddress(address _proxyRegistryAddress) public onlyOwner(){
-    proxyRegistryAddress = _proxyRegistryAddress;
-    emit SetAddress("proxyRegistryAddress", proxyRegistryAddress);
-  }    
+  function updateTokenURI(uint256 _tokenId, string calldata _uri) external isIssuer(_tokenId) {
+    require(ownerOf(_tokenId) != address(0), NOT_VALID_CERT);
+    idToUri[_tokenId] = _uri;
+
+    emit TokenURIUpdated(_tokenId, _uri);
+  }
+
 
 }
 
