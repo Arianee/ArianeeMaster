@@ -106,6 +106,7 @@ contract ArianeeStore is Pausable {
     address public authorizedExchangeAddress;
     address public protocolInfraAddress;
     address public arianeeProjectAddress;
+    address public authorizedMintAddress;
 
     /**
      * @dev This emits when a new address is set.
@@ -179,6 +180,30 @@ contract ArianeeStore is Pausable {
     function setAuthorizedExchangeAddress(address _authorizedExchangeAddress) external onlyOwner(){
         authorizedExchangeAddress = _authorizedExchangeAddress;
         emit SetAddress("authorizedExchange", _authorizedExchangeAddress);
+    }
+
+
+
+
+    /**
+     * @notice Change address of the authorized exchange address.
+     * @notice This account is the only that can change the Aria/$ exchange rate.
+     * @param _newAuthorizedMintAddress new address of the authorized mint address.
+     */
+    function setAuthorizedMintAddress(address _newAuthorizedMintAddress) external onlyOwner(){
+      authorizedMintAddress = _newAuthorizedMintAddress;
+      emit SetAddress("AuthorizedMintAddress", _newAuthorizedMintAddress);
+    }
+
+   /**
+    * @dev Modifier that check if msg sender is the authorized mint address
+    *      is valid if no authorized mint address set.
+    */
+    modifier onlyAuthorizedMintAddress() {
+      if(authorizedMintAddress != address(0)){
+        require(msg.sender == authorizedMintAddress, "To be authorized mint address");
+      }
+      _;
     }
 
     /**
@@ -268,7 +293,7 @@ contract ArianeeStore is Pausable {
         bool _initialKeyIsRequestKey,
         address _providerBrand
     )
-        external whenNotPaused()
+        external whenNotPaused() onlyAuthorizedMintAddress()
     {
         if(nonFungibleRegistry.getRewards(_tokenId) == 0){
             reserveToken(_tokenId, msg.sender);
@@ -483,7 +508,7 @@ contract ArianeeStore is Pausable {
      * @param _id uint256 id of the NFT
      * @param _to address receiver of the token.
      */
-    function reserveToken(uint256 _id, address _to) public whenNotPaused() {
+    function reserveToken(uint256 _id, address _to) public whenNotPaused() onlyAuthorizedMintAddress() {
         uint256 rewards = _spendSmartAssetsCreditFunction(0, 1);
         nonFungibleRegistry.reserveToken(_id, _to, rewards);
     }
