@@ -26,7 +26,7 @@ async function deployProtocol(deployer, network, accounts) {
   // need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(Aria);
 
-  const ariaInstance = {address:"0x46F48FbdedAa6F5500993BEDE9539ef85F4BeE8e"}
+  const ariaInstance = await deployer.deploy(Aria);
   const whiteListInstance = await deployer.deploy(Whitelist);
   const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, contractURI);
   const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address);
@@ -54,28 +54,28 @@ async function deployProtocol(deployer, network, accounts) {
 
   const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress);
 
-  arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
-  arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
-  arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
-  arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
-  arianeeStoreInstance.setAriaUSDExchange(10);
+  await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
+  await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
+  await arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
+  await arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
+  await arianeeStoreInstance.setAriaUSDExchange(10);
 
-  arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
-  creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
-  arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
-  arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
+  await arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
+  await creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
+  await arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
+  await arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
 
-  arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
-  whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
-  whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
-  whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
+  await arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
+  await whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
+  await whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
+  await whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
 
-  arianeeEventInstance.transferOwnership(ownerAddress);
-  arianeeStoreInstance.transferOwnership(ownerAddress);
-  arianeeSmartAssetInstance.transferOwnership(ownerAddress);
-  creditHistoryInstance.transferOwnership(ownerAddress);
+  await arianeeEventInstance.transferOwnership(ownerAddress);
+  await arianeeStoreInstance.transferOwnership(ownerAddress);
+  await arianeeSmartAssetInstance.transferOwnership(ownerAddress);
+  await creditHistoryInstance.transferOwnership(ownerAddress);
 
-  messageInstance.setStoreAddress(arianeeStoreInstance.address);
+  await messageInstance.setStoreAddress(arianeeStoreInstance.address);
 
   const result = {
     'contractAdresses': {
