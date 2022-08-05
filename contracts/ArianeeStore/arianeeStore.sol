@@ -1,4 +1,5 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: ISC
+pragma solidity 0.8.9;
 
 /**
  * @title Interface for contracts conforming to ERC-20
@@ -61,10 +62,11 @@ import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
 import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
 import "@0xcert/ethereum-erc20-contracts/src/contracts/token.sol";
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "./Pausable.sol";
 
 /// @title Contract managing the Arianee economy.
-contract ArianeeStore is Pausable {
+contract ArianeeStore is ERC2771Context, Pausable {
     using SafeMath for uint256;
     using AddressUtils for address;
 
@@ -151,8 +153,10 @@ contract ArianeeStore is Pausable {
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
         uint256 _creditPricesUSD2,
-        uint256 _creditPricesUSD3
+        uint256 _creditPricesUSD3,
+        address _trustedForwarder
     )
+    ERC2771Context(_trustedForwarder)
     public
     {
         acceptedToken = ERC20Interface(address(_acceptedToken));
@@ -168,7 +172,6 @@ contract ArianeeStore is Pausable {
         creditPricesUSD[3] = _creditPricesUSD3;
         _updateCreditPrice();
     }
-
 
     /**
      * @notice Change address of the authorized exchange address.
@@ -292,8 +295,8 @@ contract ArianeeStore is Pausable {
     )
         external whenNotPaused()
     {
-        uint256 _reward = nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, msg.sender, _signature);
-        _dispatchRewardsAtRequest(_providerOwner, _reward);
+        uint256 _reward = nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _msgSender(), _signature);
+        _dispatchRewardsAtRequest(_providerOwner, _msgSender(), _reward);
     }
 
     /**
@@ -364,7 +367,7 @@ contract ArianeeStore is Pausable {
      */
     function acceptEvent(uint256 _eventId, address _providerOwner) external whenNotPaused() {
         uint256 _rewards = arianeeEvent.accept(_eventId, msg.sender);
-        _dispatchRewardsAtRequest(_providerOwner, _rewards);
+        _dispatchRewardsAtRequest(_providerOwner, msg.sender, _rewards);
     }
 
     /**
@@ -374,9 +377,8 @@ contract ArianeeStore is Pausable {
      */
     function refuseEvent(uint256 _eventId, address _providerOwner) external{
         uint256 _rewards = arianeeEvent.refuse(_eventId, msg.sender);
-        _dispatchRewardsAtRequest(_providerOwner, _rewards);
+        _dispatchRewardsAtRequest(_providerOwner, msg.sender, _rewards);
     }
-
 
     /**
    * @notice Create a message and spend an Message credit.
@@ -398,11 +400,10 @@ contract ArianeeStore is Pausable {
     * @param _walletProvider address of the provider of the wallet
     */
     function readMessage(uint256 _messageId, address _walletProvider) external whenNotPaused(){
-      uint256 _reward = arianeeMessage.readMessage(_messageId, msg.sender);
+      uint256 _reward = arianeeMessage.readMessage(_messageId, _msgSender());
 
-      _dispatchRewardsAtRequest(_walletProvider, _reward);
+      _dispatchRewardsAtRequest(_walletProvider, _msgSender(), _reward);
     }
-
 
   /**
    * @notice Create/update a smartAsset update and spend an Update Credit.
@@ -424,7 +425,7 @@ contract ArianeeStore is Pausable {
     function readUpdateSmartAsset(uint256 _tokenId, address _walletProvider) external whenNotPaused(){
         uint256 _reward = arianeeUpdate.readUpdateSmartAsset(_tokenId, msg.sender);
 
-       _dispatchRewardsAtRequest(_walletProvider, _reward);
+       _dispatchRewardsAtRequest(_walletProvider, msg.sender, _reward);
     }
 
     /**
@@ -527,12 +528,11 @@ contract ArianeeStore is Pausable {
     /**
      * @dev Dispatch rewards at client reception
      * @param _providerOwner address of the provider of the interface.
+     * @param _actionInitiator address of the action initiator 
      * @param _reward reward for this token.
      */
-    function _dispatchRewardsAtRequest(address _providerOwner, uint256 _reward) internal {
+    function _dispatchRewardsAtRequest(address _providerOwner, address _actionInitiator, uint256 _reward) internal {
         acceptedToken.transfer(_providerOwner,(_reward/100)*dispatchPercent[2]);
-        acceptedToken.transfer(msg.sender,(_reward/100)*dispatchPercent[4]);
+        acceptedToken.transfer(_actionInitiator,(_reward/100)*dispatchPercent[4]);
     }
-
-
 }

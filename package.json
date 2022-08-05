@@ -16,6 +16,7 @@
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",
     "@0xcert/ethereum-erc721-contracts": "^1.7.0",
     "@0xcert/ethereum-utils-contracts": "^1.7.0",
+    "@openzeppelin/contracts": "^4.7.2",
     "big-number": "^2.0.0",
     "truffle-hdwallet-provider": "^1.0.10"
   },
