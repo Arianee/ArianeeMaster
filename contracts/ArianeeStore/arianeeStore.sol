@@ -323,6 +323,28 @@ contract ArianeeStore is Pausable {
     }
 
     /**
+     * @notice Request a nft and dispatch rewards, is intended to be used per a relay.
+     * @param _tokenId ID of the NFT to transfer.
+     * @param _hash Hash of tokenId + newOwner address.
+     * @param _keepRequestToken If false erase the access token of the NFT.
+     * @param _providerOwner address of the provider of the interface.
+     * @param _newOwner address of the NFT new owner
+     */
+    function requestToken(
+      uint256 _tokenId,
+      bytes32 _hash,
+      bool _keepRequestToken,
+      address _providerOwner,
+      bytes calldata _signature,
+      address _newOwner
+    )
+    external whenNotPaused()
+    {
+      uint256 _reward = nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _newOwner, _signature);
+      _dispatchRewardsAtRequest(_providerOwner, _reward);
+    }
+
+    /**
      * @notice Change the percent of rewards per actor.
      * @notice Can only be called by owner.
      * @param _percentInfra Percent get by the infrastructure maintener.
