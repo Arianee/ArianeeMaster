@@ -1,13 +1,10 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../Interfaces/IArianeeSmartAsset.sol";
 
-contract iSmartAsset{
-    function ownerOf(uint256 _tokenId) external returns (address _owner);
-}
-
-contract ArianeeLost is Ownable{
-
+contract ArianeeLost is Ownable {
    /**
     * @dev Mapping from token id to missing status.
     */
@@ -36,7 +33,7 @@ contract ArianeeLost is Ownable{
     /**
      * @dev Interface to connected contract.
      */
-    iSmartAsset public smartAsset;
+    IArianeeSmartAsset public smartAsset;
 
     /**
      * @dev This emits when a new manager is set by the contract owner.
@@ -77,8 +74,8 @@ contract ArianeeLost is Ownable{
      /**
       * @param _smartAssetAddress address of SmartAssetContract
       */
-    constructor(address _smartAssetAddress, address _managerIdentity) public {
-        smartAsset = iSmartAsset(_smartAssetAddress);
+    constructor(address _smartAssetAddress, address _managerIdentity) {
+        smartAsset = IArianeeSmartAsset(_smartAssetAddress);
         setManagerIdentity(_managerIdentity);
     }
 
@@ -250,5 +247,4 @@ contract ArianeeLost is Ownable{
     function getManagerIdentity() view external returns (address _managerIdentity){
         return managerIdentity;
     }
-
 }

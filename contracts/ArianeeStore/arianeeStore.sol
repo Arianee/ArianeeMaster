@@ -1,82 +1,27 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-/**
- * @title Interface for contracts conforming to ERC-20
- */
-contract ERC20Interface {
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function balanceOf(address owner) public view returns (uint256);
-}
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
-/**
- * @title Interface for contracts conforming to ERC-721
- */
-contract ERC721Interface {
-    function reserveToken(uint256 id, address _to, uint256 _rewards) external;
-    function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _encryptedInitialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) public returns(uint256);
-    function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external returns(uint256);
-    function getRewards(uint256 _tokenId) external view returns(uint256);
-}
-
-
-/**
- * @title Interface to interact with ArianneCreditHistory
- */
-contract iArianeeCreditHistory {
-    function addCreditHistory(address _spender, uint256 _price, uint256 _quantity, uint256 _type) external;
-    function consumeCredits(address _spender, uint256 _type, uint256 _quantity) external returns(uint256);
-    function arianeeStoreAddress() external returns(address);
-}
-
-/**
- * @title Interface to interact with ArianeeEvent
- */
- contract iArianeeEvent{
-     function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string memory _uri, uint256 _reward, address _provider) public;
-     function accept(uint256 _eventId, address _owner) public returns(uint256);
-     function refuse(uint256 _eventId, address _owner) public returns(uint256);
- }
-
-
-/**
- * @title Interface to interact with ArianeeMessage
- */
-contract iArianeeMessage{
-  function readMessage(uint256 _messageId, address _from) public returns (uint256);
-  function sendMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _from, uint256 _reward) public;
-}
-
-/**
- * @title Interface to interact with ArianeeUpdate
- */
-contract iArianeeUpdate{
-  function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _issuer, uint256 _reward) external;
-  function readUpdateSmartAsset(uint256 _tokenId, address _from) external returns(uint256);
-}
-
-
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
-import "@0xcert/ethereum-erc721-contracts/src/contracts/nf-token-metadata-enumerable.sol";
-import "@0xcert/ethereum-erc20-contracts/src/contracts/token.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "./Pausable.sol";
+import "../Interfaces/IArianeeSmartAsset.sol";
+import "../Interfaces/IArianeeCreditHistory.sol";
+import "../Interfaces/IArianeeEvent.sol";
+import "../Interfaces/IArianeeMessage.sol";
+import "../Interfaces/IArianeeUpdate.sol";
 
 /// @title Contract managing the Arianee economy.
-contract ArianeeStore is Pausable {
-    using SafeMath for uint256;
-    using AddressUtils for address;
-
+contract ArianeeStore is Ownable, Pausable {
     /**
      * Interface for all the connected contracts.
      */
-    ERC20Interface public acceptedToken;
-    ERC721Interface public nonFungibleRegistry;
-    iArianeeCreditHistory public creditHistory;
-    iArianeeEvent public arianeeEvent;
-    iArianeeMessage public arianeeMessage;
-    iArianeeUpdate public arianeeUpdate;
+    IERC20 public acceptedToken;
+    IArianeeSmartAsset public nonFungibleRegistry;
+    IArianeeCreditHistory public creditHistory;
+    IArianeeEvent public arianeeEvent;
+    IArianeeMessage public arianeeMessage;
+    IArianeeUpdate public arianeeUpdate;
 
     /**
      * @dev Mapping of the credit price in $cent.
@@ -141,8 +86,8 @@ contract ArianeeStore is Pausable {
      * @param _nonFungibleRegistry - Address of the NFT address
      */
     constructor(
-        ERC20 _acceptedToken,
-        ERC721 _nonFungibleRegistry,
+        IERC20 _acceptedToken,
+        IArianeeSmartAsset _nonFungibleRegistry,
         address _creditHistoryAddress,
         address _arianeeEvent,
         address _arianeeMessage,
@@ -152,15 +97,13 @@ contract ArianeeStore is Pausable {
         uint256 _creditPricesUSD1,
         uint256 _creditPricesUSD2,
         uint256 _creditPricesUSD3
-    )
-    public
-    {
-        acceptedToken = ERC20Interface(address(_acceptedToken));
-        nonFungibleRegistry = ERC721Interface(address(_nonFungibleRegistry));
-        creditHistory = iArianeeCreditHistory(address(_creditHistoryAddress));
-        arianeeEvent = iArianeeEvent(address(_arianeeEvent));
-        arianeeMessage = iArianeeMessage(address(_arianeeMessage));
-        arianeeUpdate = iArianeeUpdate(address(_arianeeUpdate));
+    ) {
+        acceptedToken = IERC20(address(_acceptedToken));
+        nonFungibleRegistry = IArianeeSmartAsset(address(_nonFungibleRegistry));
+        creditHistory = IArianeeCreditHistory(address(_creditHistoryAddress));
+        arianeeEvent = IArianeeEvent(address(_arianeeEvent));
+        arianeeMessage = IArianeeMessage(address(_arianeeMessage));
+        arianeeUpdate = IArianeeUpdate(address(_arianeeUpdate));
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
         creditPricesUSD[1] = _creditPricesUSD1;
@@ -175,7 +118,7 @@ contract ArianeeStore is Pausable {
      * @notice This account is the only that can change the Aria/$ exchange rate.
      * @param _authorizedExchangeAddress new address of the authorized echange address.
      */
-    function setAuthorizedExchangeAddress(address _authorizedExchangeAddress) external onlyOwner(){
+    function setAuthorizedExchangeAddress(address _authorizedExchangeAddress) external onlyOwner() {
         authorizedExchangeAddress = _authorizedExchangeAddress;
         emit SetAddress("authorizedExchange", _authorizedExchangeAddress);
     }
@@ -232,7 +175,7 @@ contract ArianeeStore is Pausable {
      */
     function buyCredit(uint256 _creditType, uint256 _quantity, address _to) external whenNotPaused() {
 
-        uint256 tokens = _quantity.mul(creditPrices[_creditType]);
+        uint256 tokens = _quantity * creditPrices[_creditType];
 
         // Transfer required token quantity to buy quantity credit
         require(acceptedToken.transferFrom(
@@ -452,7 +395,7 @@ contract ArianeeStore is Pausable {
     /**
      * @notice The USD credit price per type.
      * @param _creditType for which we want the USD price.
-     * @return price in USD.
+     * @return _creditPriceUSD price in USD.
      */
     function creditPriceUSD(uint256 _creditType) external view returns(uint256 _creditPriceUSD) {
         _creditPriceUSD = creditPricesUSD[_creditType];
@@ -461,7 +404,7 @@ contract ArianeeStore is Pausable {
     /**
      * @notice dispatch for rewards.
      * @param _receiver for which we want the % of rewards.
-     * @return % of rewards.
+     * @return _percent % of rewards.
      */
     function percentOfDispatch(uint8 _receiver) external view returns(uint8 _percent){
         _percent = dispatchPercent[_receiver];
@@ -484,7 +427,7 @@ contract ArianeeStore is Pausable {
      * @param _tokenId id of the token.
      * @return true.
      */
-    function canTransfer(address _to,address _from,uint256 _tokenId) external pure returns(bool){
+    function canTransfer(address _to, address _from, uint256 _tokenId) external pure returns(bool){
         return true;
     }
 
@@ -555,6 +498,4 @@ contract ArianeeStore is Pausable {
         acceptedToken.transfer(_providerOwner,(_reward/100)*dispatchPercent[2]);
         acceptedToken.transfer(msg.sender,(_reward/100)*dispatchPercent[4]);
     }
-
-
 }

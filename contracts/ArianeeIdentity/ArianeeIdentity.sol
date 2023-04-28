@@ -1,11 +1,9 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArianeeIdentity is
-Ownable
-{
-
+contract ArianeeIdentity is Ownable {
   /**
    * @dev A descriptive name.
    */
@@ -89,7 +87,7 @@ Ownable
     * @param _newBouncerAddress Address of the bouncer.
     * @param _newValidatorAddress Address of the validator.
     */
-  constructor(address _newBouncerAddress, address _newValidatorAddress) public {
+  constructor(address _newBouncerAddress, address _newValidatorAddress) {
     name = "Arianee Identity";
     symbol = "AriaID";
     updateBouncerAddress(_newBouncerAddress);
@@ -176,7 +174,7 @@ Ownable
   /**
    * @notice Check if an address is approved.
    * @param _identity address of the identity.
-   * @return true if approved.
+   * @return _isApproved true if approved.
    */
   function addressIsApproved(address _identity) external view returns (bool _isApproved) {
       _isApproved = approvedList[_identity];
@@ -185,7 +183,7 @@ Ownable
   /**
    * @notice The uri of a given identity.
    * @param _identity address of the identity.
-   * @return the uri.
+   * @return _uri the uri.
    */
   function addressURI(address _identity) external view returns (string memory _uri) {
       _uri = addressToUri[_identity];
@@ -194,7 +192,7 @@ Ownable
   /**
    * @notice The imprint for a given identity.
    * @param _identity address of the identity.
-   * @return true if approved.
+   * @return _imprint true if approved.
    */
   function addressImprint(address _identity) external view returns (bytes32 _imprint) {
       _imprint = addressToImprint[_identity];
@@ -203,7 +201,7 @@ Ownable
   /**
    * @notice The waiting uri for a given identity.
    * @param _identity address of the identity.
-   * @return the waiting Uri.
+   * @return _waitingUri the waiting Uri.
    */
   function waitingURI(address _identity) external view returns(string memory _waitingUri) {
       _waitingUri = addressToWaitingUri[_identity];
@@ -212,7 +210,7 @@ Ownable
   /**
    * @notice The waiting imprint for a given identity.
    * @param _identity address of the identity.
-   * @return the waiting imprint.
+   * @return _waitingImprint the waiting imprint.
    */
   function waitingImprint(address _identity) external view returns(bytes32 _waitingImprint) {
       _waitingImprint = addressToWaitingImprint[_identity];
@@ -221,7 +219,7 @@ Ownable
   /**
    * @notice The compromise date for a given identity.
    * @param _identity address of the identity.
-   * @return the waiting Uri.
+   * @return _compromiseDate the waiting Uri.
    */
   function compromiseIdentityDate(address _identity) external view returns(uint256 _compromiseDate) {
       _compromiseDate = compromiseDate[_identity];
@@ -230,7 +228,7 @@ Ownable
   /**
    * @notice The address for a given short id.
    * @param _id short id of the identity
-   * @return the address of the identity.
+   * @return _identity the address of the identity.
    */
   function addressFromId(bytes3 _id) external view returns(address _identity) {
       _identity = addressListing[_id];
@@ -266,17 +264,16 @@ Ownable
    /**
     * @dev Convert a bytes in bytes3.
     * @param _inBytes input bytes.
-    * @return output bytes3.
+    * @return _outBytes3 output bytes3.
     */
-  function _convertBytesToBytes3(bytes memory _inBytes) internal pure returns (bytes3 outBytes3) {
+  function _convertBytesToBytes3(bytes memory _inBytes) internal pure returns (bytes3 _outBytes3) {
     if (_inBytes.length == 0) {
         return 0x0;
     }
 
     assembly {
-        outBytes3 := mload(add(_inBytes, 32))
+        _outBytes3 := mload(add(_inBytes, 32))
     }
   }
-
 }
 

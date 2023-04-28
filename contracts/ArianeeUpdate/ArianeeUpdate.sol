@@ -1,23 +1,15 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../Interfaces/IArianeeSmartAsset.sol";
 
-/**
- * @title Interface for contracts conforming to ERC-721
- */
-contract ERC721Interface {
-    function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer);
-    function tokenImprint(uint256 _tokenId) external view returns(bytes32 _imprint);
-    function canOperate(uint256 _tokenId, address _operator) public returns(bool);
-}
-
-contract ArianeeUpdate is
-Ownable {
+contract ArianeeUpdate is Ownable {
 
   /**
    * Interface for connected contract.
    */
-  ERC721Interface smartAsset;
+  IArianeeSmartAsset smartAsset;
 
   /**
    * @dev Mapping of the updates.
@@ -43,8 +35,8 @@ Ownable {
         uint256 updateTimestamp;
     }
 
-  constructor(address _smartAssetAddress) public{
-      smartAsset = ERC721Interface(address(_smartAssetAddress));
+  constructor(address _smartAssetAddress) {
+      smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
   }
 
   /**
@@ -155,5 +147,4 @@ Ownable {
       storeAddress = _newStoreAddress;
       emit StoreAddressUpdated(_newStoreAddress);
   }
-
 }

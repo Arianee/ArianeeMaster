@@ -1,5 +1,9 @@
-pragma solidity 0.5.6;
+/**
+ * @notice This contract is out of scope of this protocol upgrade
+ * @dev Consider moving this contract to a separate repository to avoid compilation issues with the new version of solidity
+ */
 
+pragma solidity 0.5.6;
 
 import "@0xcert/ethereum-erc20-contracts/src/contracts/erc20.sol";
 import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";

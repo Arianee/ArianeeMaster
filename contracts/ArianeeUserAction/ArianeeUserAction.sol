@@ -1,22 +1,16 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/abilitable.sol";
+import "../Interfaces/IArianeeSmartAsset.sol";
+import "../Interfaces/IArianeeWhitelist.sol";
 
-contract iArianeeWhitelist{
-  function addWhitelistedAddress(uint256 _tokenId, address _address) external ;
-}
+contract ArianeeUserAction {
+  IArianeeWhitelist whitelist;
+  IArianeeSmartAsset smartAsset;
 
-contract ERC721Interface {
-  function ownerOf(uint256 _tokenId) public view returns(address);
-}
-
-contract ArianeeUserAction{
-  iArianeeWhitelist whitelist;
-  ERC721Interface smartAsset;
-
-  constructor(address _whitelistAddress, address _smartAssetAddress) public{
-    whitelist = iArianeeWhitelist(address(_whitelistAddress));
-    smartAsset = ERC721Interface(address(_smartAssetAddress));
+  constructor(address _whitelistAddress, address _smartAssetAddress) {
+    whitelist = IArianeeWhitelist(address(_whitelistAddress));
+    smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
   }
 
   function addAddressToWhitelist(uint256 _tokenId, address _address) external {
@@ -24,7 +18,5 @@ contract ArianeeUserAction{
     require(_owner == msg.sender, "You are not the owner of this certificate");
 
     whitelist.addWhitelistedAddress(_tokenId, _address);
-
   }
-
 }
