@@ -1,13 +1,9 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArianeeCreditHistory is
-Ownable
-{
-  using SafeMath for uint256;
-
+contract ArianeeCreditHistory is Ownable {
   /**
    * @dev Mapping from address to array of creditHistory by type of credit.
    */
@@ -68,7 +64,7 @@ Ownable
           });
 
       creditHistory[_spender][_type].push(_creditBuy);
-      totalCredits[_spender][_type] = SafeMath.add(totalCredits[_spender][_type], _quantity);
+      totalCredits[_spender][_type] = totalCredits[_spender][_type] + _quantity;
   }
 
   /**
@@ -82,16 +78,17 @@ Ownable
       require(totalCredits[_spender][_type]>0, "No credit of that type");
       uint256 _index = historyIndex[_spender][_type];
       require(creditHistory[_spender][_type][_index].quantity >= _quantity);
+      unchecked{
+        uint256 price = creditHistory[_spender][_type][_index].price;
+        creditHistory[_spender][_type][_index].quantity = creditHistory[_spender][_type][_index].quantity - _quantity;
+        totalCredits[_spender][_type] = totalCredits[_spender][_type] - 1;
 
-      uint256 price = creditHistory[_spender][_type][_index].price;
-      creditHistory[_spender][_type][_index].quantity = SafeMath.sub(creditHistory[_spender][_type][_index].quantity, _quantity);
-      totalCredits[_spender][_type] = SafeMath.sub(totalCredits[_spender][_type], 1);
+        if(creditHistory[_spender][_type][_index].quantity == 0){
+            historyIndex[_spender][_type] = historyIndex[_spender][_type] - 1;
+        }
 
-      if(creditHistory[_spender][_type][_index].quantity == 0){
-          historyIndex[_spender][_type] = SafeMath.add(historyIndex[_spender][_type], 1);
+        return price;
       }
-
-      return price;
   }
 
   /**
@@ -99,7 +96,8 @@ Ownable
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
    * @param _index of the credit for which we want the history.
-   * @return Credit history.
+   * @return _price Credit history.
+   * @return _quantity Credit history.
    */
   function userCreditHistory(address _spender, uint256 _type, uint256 _index) external view returns (uint256 _price, uint256 _quantity) {
       _price = creditHistory[_spender][_type][_index].price;
@@ -110,7 +108,7 @@ Ownable
    * @notice Get the actual index for a spender and a credit type.
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
-   * @return Current index.
+   * @return _historyIndex Current index.
    */
   function userIndex(address _spender, uint256 _type) external view returns(uint256 _historyIndex){
       _historyIndex = historyIndex[_spender][_type];
@@ -120,10 +118,9 @@ Ownable
    * @notice Give the total balance of credit for a spender.
    * @param _spender for which we want the credit history.
    * @param _type of the credit for which we want the history.
-   * @return Balance of the spender.
+   * @return _totalCredits Balance of the spender.
    */
   function balanceOf(address _spender, uint256 _type) external view returns(uint256 _totalCredits){
       _totalCredits = totalCredits[_spender][_type];
   }
-
 }

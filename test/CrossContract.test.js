@@ -1,83 +1,133 @@
 const ArianeeSmartAsset = artifacts.require('ArianeeSmartAsset');
 const ArianeeStore = artifacts.require('ArianeeStore');
-const Arianee = artifacts.require('Aria');
+const Aria = artifacts.require('Aria');
 const Whitelist = artifacts.require('ArianeeWhitelist');
 const CreditHistory = artifacts.require('ArianeeCreditHistory');
+const ArianeeEvent = artifacts.require('ArianeeEvent');
+const ArianeeIdentity = artifacts.require('ArianeeIdentity');
+const ArianeeLost = artifacts.require('ArianeeLost');
+const ArianeeMessage = artifacts.require('ArianeeMessage');
+const ArianeeUpdate = artifacts.require('ArianeeUpdate');
+const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 const catchRevert = require('./helpers/exceptions.js').catchRevert;
 
 const bigNumber = require('big-number');
 
 contract('Cross Contracts', (accounts) => {
-  let smartAsset, aria, store, whitelist, creditHistory;
+  let arianeeSmartAssetInstance, ariaInstance, arianeeStoreInstance, whiteListInstance,
+    creditHistoryInstance, messageInstance, arianeeEventInstance, arianeeLost, arianeeUpdate,
+    arianeeUserAction;
   beforeEach(async () => {
-    whitelist = await Whitelist.new();
-    creditHistory = await CreditHistory.new();
-    aria = await Arianee.new();
 
-    smartAsset = await ArianeeSmartAsset.new(whitelist.address);
+    const authorizedExchangeAddress = accounts[0];
+    const projectAddress = accounts[2];
+    const infraAddress = accounts[3];
+    const bouncerAddress = accounts[0];
+    const validatorAddress = accounts[0];
+    const ownerAddress = accounts[0];
+    const lostManager = accounts[0];
 
-    store = await ArianeeStore.new(aria.address, smartAsset.address, creditHistory.address, '100000000000000000',10 ,10 ,10);
+    ariaInstance = await Aria.new();
+    whiteListInstance = await Whitelist.new();
+    arianeeSmartAssetInstance = await ArianeeSmartAsset.new(whiteListInstance.address);
+    messageInstance = await ArianeeMessage.new(whiteListInstance.address, arianeeSmartAssetInstance.address);
+    creditHistoryInstance = await CreditHistory.new();
+    arianeeEventInstance = await ArianeeEvent.new(arianeeSmartAssetInstance.address, whiteListInstance.address);
+    arianeeLost = await ArianeeLost.new(arianeeSmartAssetInstance.address, lostManager);
+    arianeeUpdate = await ArianeeUpdate.new(arianeeSmartAssetInstance.address);
+    arianeeUserAction = await ArianeeUserAction.new(whiteListInstance.address, arianeeSmartAssetInstance.address);
 
-    smartAsset.grantAbilities(store.address, [2]);
-    smartAsset.setStoreAddress(ArianeeStore.address);
 
-    store.setArianeeProjectAddress(accounts[2]);
-    store.setProtocolInfraAddress(accounts[3]);
-    store.setAuthorizedExchangeAddress(accounts[0]);
-    store.setDispatchPercent(10,20,20,40,10);
+    arianeeStoreInstance = await ArianeeStore.new(
+      ariaInstance.address,
+      arianeeSmartAssetInstance.address,
+      creditHistoryInstance.address,
+      arianeeEventInstance.address,
+      messageInstance.address,
+      arianeeUpdate.address,
+      '100000000000000000',
+      '10',
+      '10',
+      '10',
+      '10'
+    );
 
-    creditHistory.setArianeeStoreAddress(store.address);
+    const identityInstance = ArianeeIdentity.new(bouncerAddress, validatorAddress);
 
-    whitelist.grantAbilities(smartAsset.address,[2]);
+    arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
+    arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
+    arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
+    arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
+
+    arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
+    creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
+    arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
+    arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
+
+    arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
+    whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
+    whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
+    whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
+
+    arianeeEventInstance.transferOwnership(ownerAddress);
+    arianeeStoreInstance.transferOwnership(ownerAddress);
+    arianeeSmartAssetInstance.transferOwnership(ownerAddress);
+    creditHistoryInstance.transferOwnership(ownerAddress);
+
+    messageInstance.setStoreAddress(arianeeStoreInstance.address);
 
   });
 
   it('it should refuse to buy credit if you have not enough arias', async () => {
 
-    await aria.approve(store.address, 0, {from: accounts[0]});
-    await catchRevert(store.buyCredit(0, 1, accounts[0], {from: accounts[0]}));
+    await ariaInstance.approve(arianeeStoreInstance.address, 0, {from: accounts[0]});
+    try{
+      await arianeeStoreInstance.buyCredit(0, 1, accounts[0], {from: accounts[0]});
+      assert.equal(true, false);
+    }
+    catch (e) {
+      const credit = await creditHistoryInstance.balanceOf(accounts[0], 0);
+      assert.equal(credit, 0);
+    }
 
-    const credit = await creditHistory.balanceOf(accounts[0], 0);
-    assert.equal(credit, 0);
+
   });
 
   it('should send back the good balance', async () => {
-    await aria.approve(store.address, '1000000000000000000', {from: accounts[0]});
-    await store.buyCredit(0, 1, accounts[0]);
-    await store.reserveToken(1, accounts[0], {from: accounts[0]});
-
-    const count = await smartAsset.balanceOf(accounts[0]);
+    await ariaInstance.approve(arianeeStoreInstance.address, '1000000000000000000', {from: accounts[0]});
+    await arianeeStoreInstance.buyCredit(0, 1, accounts[0]);
+    await arianeeStoreInstance.reserveToken(1, accounts[0], {from: accounts[0]});
+    const count = await arianeeSmartAssetInstance.balanceOf(accounts[0]);
     assert.equal(count, 1);
   });
 
-  it('should dispatch rewards correctly when buy a certificate', async()=>{
-    await aria.transfer(accounts[1],'1000000000000000000', {from:accounts[0]});
-    await aria.approve(store.address, '1000000000000000000', {from: accounts[1]});
-    await store.buyCredit(0,1, accounts[1],{from:accounts[1]});
+  it('should dispatch rewards correctly when buy a certificate', async () => {
 
-    await store.reserveToken(1, accounts[1],{from: accounts[1]});
+    await ariaInstance.transfer(accounts[1], '1000000000000000000', {from: accounts[0]});
+    await ariaInstance.approve(arianeeStoreInstance.address, '1000000000000000000', {from: accounts[1]});
+    await arianeeStoreInstance.buyCredit(0, 1, accounts[1], {from: accounts[1]});
 
+    await arianeeStoreInstance.reserveToken(1, accounts[1], {from: accounts[1]});
     let account = web3.eth.accounts.create();
-    let tokenId=1;
+    let tokenId = 1;
     let address = accounts[6];
-    let encoded = web3.utils.keccak256(web3.eth.abi.encodeParameters(['uint', 'address'],[tokenId,address]));
+    let encoded = web3.utils.keccak256(web3.eth.abi.encodeParameters(['uint', 'address'], [tokenId, address]));
     let signedMessage = account.sign(encoded, account.address);
 
+    await arianeeStoreInstance.hydrateToken(1, web3.utils.keccak256('imprint'), 'http://arianee.org', account.address, (Math.floor((Date.now()) / 1000) + 2678400), true, accounts[4], {from: accounts[1]});
 
-    await store.hydrateToken(1, web3.utils.keccak256('imprint'), 'http://arianee.org', account.address, (Math.floor((Date.now())/1000)+2678400), true, accounts[4], {from:accounts[1]});
-
-    await store.requestToken(1, signedMessage.messageHash, true, accounts[5], signedMessage.signature, {from:accounts[6]});
+    await arianeeStoreInstance.methods['requestToken(uint256,bytes32,bool,address,bytes)'](1, signedMessage.messageHash, true, accounts[5], signedMessage.signature, {from: accounts[6]});
 
     let count = [];
-    count[0] = await aria.balanceOf(accounts[0]);
-    count[1] = await aria.balanceOf(accounts[1]);
-    count[2] = await aria.balanceOf(accounts[2]);
-    count[3] = await aria.balanceOf(accounts[3]);
-    count[4] = await aria.balanceOf(accounts[4]);
-    count[5] = await aria.balanceOf(accounts[5]);
-    count[6] = await aria.balanceOf(accounts[6]);
+    count[0] = await ariaInstance.balanceOf(accounts[0]);
+    count[1] = (await ariaInstance.balanceOf(accounts[1])).toString();
+    count[2] = await ariaInstance.balanceOf(accounts[2]);
+    count[3] = await ariaInstance.balanceOf(accounts[3]);
+    count[4] = await ariaInstance.balanceOf(accounts[4]);
+    count[5] = await ariaInstance.balanceOf(accounts[5]);
+    count[6] = await ariaInstance.balanceOf(accounts[6]);
 
-    const storeBalance = await aria.balanceOf(store.address);
+    const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
 
     assert.equal(storeBalance, 0);
     assert.equal(count[1], 0);

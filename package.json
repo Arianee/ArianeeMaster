@@ -1,6 +1,6 @@
 {
   "name": "@arianee/arianeemaster",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,13 +9,14 @@
     "symlink": "node createSymlink.js",
     "lint": "eslint './**/*.js?(x)'",
     "clean": "rm -r build/",
-    "test": "truffle compile --reset; truffle test --network test",
+    "test": "truffle compile --all; truffle test --network test",
     "deployTestnet": "truffle migrate --network arianeeTest --reset; node createIdentity.js --network arianeeTest --identityAddress 0x59d3631c86BbE35EF041872d502F218A39FBa150 --storeAddress 0xe982E462b094850F12AF94d21D470e21bE9D0E9C --ariaAddress 0xCfEB869F69431e42cdB54A4F4f105C19C080A601"
   },
   "dependencies": {
-    "@0xcert/ethereum-erc20-contracts": "^1.7.0",
     "@0xcert/ethereum-erc721-contracts": "^1.7.0",
+    "@0xcert/ethereum-erc20-contracts": "^1.7.0",
     "@0xcert/ethereum-utils-contracts": "^1.7.0",
+    "@openzeppelin/contracts": "^4.8.3",
     "big-number": "^2.0.0",
     "truffle-hdwallet-provider": "^1.0.10"
   },
@@ -28,7 +29,8 @@
     "eslint": "^5.16.0",
     "eslint-utils": ">=1.4.1",
     "lodash": ">=4.17.21",
-    "web3": "^1.2.4",
+    "truffle": "^5.8.4",
+    "web3": "^1.8.2",
     "yargs": "^15.0.2"
   }
 }

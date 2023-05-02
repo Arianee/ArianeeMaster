@@ -1,28 +1,15 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
-import "@0xcert/ethereum-utils-contracts/src/contracts/math/safe-math.sol";
-import "./Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "../Interfaces/IArianeeSmartAsset.sol";
+import "../Interfaces/IArianeeWhitelist.sol";
 
-contract ERC721Interface {
-    function canOperate(uint256 _tokenId, address _operator) public returns(bool);
-    function isTokenValid(uint256 _tokenId, bytes32 _hash, uint256 _tokenType, bytes memory _signature) public view returns (bool);
-    function issuerOf(uint256 _tokenId) external view returns(address _tokenIssuer);
-    function tokenCreation(uint256 _tokenId) external view returns(uint256);
-}
-
-contract iArianeeWhitelist {
-    function addWhitelistedAddress(uint256 _tokenId, address _address) public;
-}
-
-contract ArianeeEvent is
-Ownable, Pausable{
-    
-    using SafeMath for uint256;
-    
+contract ArianeeEvent is Ownable, Pausable {
     address arianeeStoreAddress;
-    iArianeeWhitelist arianeeWhitelist;
-    ERC721Interface smartAsset;
+    IArianeeWhitelist arianeeWhitelist;
+    IArianeeSmartAsset smartAsset;
     
     uint256 eventDestroyDelay = 31536000;
     
@@ -78,9 +65,9 @@ Ownable, Pausable{
     }
     
     
-    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) public{
-        arianeeWhitelist = iArianeeWhitelist(address(_arianeeWhitelistAddress));
-        smartAsset = ERC721Interface(address(_smartAssetAddress));
+    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) {
+        arianeeWhitelist = IArianeeWhitelist(address(_arianeeWhitelistAddress));
+        smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
     }
     
     /**
@@ -100,7 +87,6 @@ Ownable, Pausable{
      * @param _uri uri of the JSON of the service.
      * @param _reward total rewards of this event.
      * @param _provider address of the event provider.
-     * @return the id of the service.
      */
     function create(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, uint256 _reward, address _provider) external onlyStore() whenNotPaused() {
         require(smartAsset.tokenCreation(_tokenId)>0);
@@ -110,12 +96,13 @@ Ownable, Pausable{
             URI : _uri,
             imprint : _imprint,
             provider : _provider,
-            destroyLimitTimestamp : eventDestroyDelay.add(block.timestamp)
+            destroyLimitTimestamp : eventDestroyDelay + block.timestamp
         });
         
         events[_eventId] = _event;
         
-        uint256 length = pendingEvents[_tokenId].push(_eventId);
+        pendingEvents[_tokenId].push(_eventId);
+        uint256 length = pendingEvents[_tokenId].length;
         idToPendingEvents[_eventId] = length - 1; 
         
         eventIdToToken[_eventId] = _tokenId;
@@ -141,11 +128,12 @@ Ownable, Pausable{
             pendingEvents[_tokenId][pendingEventToRemoveIndex]=lastPendingEvent;
             idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
         }
-        
-        pendingEvents[_tokenId].length--;
+
+        pendingEvents[_tokenId].pop();
         delete idToPendingEvents[_eventId];
         
-        uint256 length = tokenEventsList[_tokenId].push(_eventId);
+        tokenEventsList[_tokenId].push(_eventId);
+        uint256 length = tokenEventsList[_tokenId].length;
         idToTokenEventIndex[_eventId] = length - 1;
         
         arianeeWhitelist.addWhitelistedAddress(_tokenId, events[_eventId].provider);
@@ -211,7 +199,7 @@ Ownable, Pausable{
             idToTokenEventIndex[lastEvent] = eventIdToRemove;
         }
         
-        tokenEventsList[_tokenId].length--;
+        tokenEventsList[_tokenId].pop();
         delete idToTokenEventIndex[_eventId];
         delete eventIdToToken[_eventId];
         delete events[_eventId];
@@ -232,7 +220,7 @@ Ownable, Pausable{
             idToPendingEvents[lastPendingEvent] = pendingEventToRemoveIndex;
         }
         
-        pendingEvents[_tokenId].length--;
+        pendingEvents[_tokenId].pop();
         
         delete idToPendingEvents[_eventId];
         delete eventIdToToken[_eventId];

@@ -1,10 +1,9 @@
-pragma solidity 0.5.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
 
-import "@0xcert/ethereum-utils-contracts/src/contracts/permission/abilitable.sol";
+import "../Utilities/0x/Abilitable.sol";
 
-contract ArianeeWhitelist is
-Abilitable{
-  
+contract ArianeeWhitelist is Abilitable {
   /**
    * @dev Mapping from  token id to whitelisted address
    */
@@ -63,7 +62,7 @@ Abilitable{
    * @dev Return if an address whitelisted for a given NFT.
    * @param _tokenId NFT to check.
    * @param _address address to check.
-   * @return true if address it whitelisted.
+   * @return _isWhitelisted true if address it whitelisted.
    */
   function isWhitelisted(uint256 _tokenId, address _address) public view returns (bool _isWhitelisted) {
       _isWhitelisted = whitelistedAddress[_tokenId][_address];
@@ -74,10 +73,9 @@ Abilitable{
    * @param _owner owner of the token id.
    * @param _sender address to check.
    * @param _tokenId NFT to check.
-   * @return true if address it blacklisted.
+   * @return _isBlacklisted true if address it blacklisted.
    */
   function isBlacklisted(address _owner, address _sender, uint256 _tokenId) public view returns(bool _isBlacklisted) {
       _isBlacklisted = optOutAddressPerOwner[_owner][_tokenId][_sender];
   }
-
 }
