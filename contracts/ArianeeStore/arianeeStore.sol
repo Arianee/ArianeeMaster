@@ -201,6 +201,9 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
 
     }
 
+    mapping (uint256=>address) tokenToHydrateReward;
+    mapping (uint256=>address) tokenToWalletReward;
+
     /**
      * @notice Hydrate token and dispatch rewards.
      * @notice Reserve token if token not reserved.
@@ -226,8 +229,9 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         if(nonFungibleRegistry.getRewards(_tokenId) == 0){
             reserveToken(_tokenId, _msgSender());
         }
-        uint256 _reward = nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey,  _msgSender());
-        _dispatchRewardsAtHydrate(_providerBrand, _reward);
+        nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey,  _msgSender(), _providerBrand);
+        tokenToHydrateReward[_tokenId] = _providerBrand;
+    
     }
 
     /**
@@ -246,8 +250,20 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     )
         external whenNotPaused()
     {
-        uint256 _reward = nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _msgSender(), _signature);
-        _dispatchRewardsAtRequest(_providerOwner, _reward);
+        nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _msgSender(), _signature);
+        tokenToWalletReward[_tokenId] = _providerOwner;
+    }
+
+    
+    function _dispatchRewards(uint256 _tokenId, address _newOwner) external {
+        uint256 _reward = _spendSmartAssetsCreditFunction(0, 1);
+        address _providerBrand = tokenToHydrateReward[_tokenId];
+        address _providerOwner = tokenToWalletReward[_tokenId];
+        acceptedToken.transfer(protocolInfraAddress,(_reward/100)*dispatchPercent[0]);
+        acceptedToken.transfer(arianeeProjectAddress,(_reward/100)*dispatchPercent[3]);
+        acceptedToken.transfer(_providerBrand,(_reward/100)*dispatchPercent[1]);
+        acceptedToken.transfer(_providerOwner,(_reward/100)*dispatchPercent[2]);
+        acceptedToken.transfer(_newOwner,(_reward/100)*dispatchPercent[4]);
     }
 
     /**
@@ -459,8 +475,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @param _to address receiver of the token.
      */
     function reserveToken(uint256 _id, address _to) public whenNotPaused() {
-        uint256 rewards = _spendSmartAssetsCreditFunction(0, 1);
-        nonFungibleRegistry.reserveToken(_id, _to, rewards);
+        nonFungibleRegistry.reserveToken(_id, _to);
     }
 
     /**

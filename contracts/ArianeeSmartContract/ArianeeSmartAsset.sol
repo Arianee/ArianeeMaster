@@ -31,10 +31,6 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    */
   mapping(uint256=>bool) internal recoveryRequest;
 
-  /**
-   * @dev Mapping from token id to total rewards for this NFT.
-   */
-  mapping(uint256=>uint256) internal rewards;
 
   /**
    * @dev Mapping from token id to Cert.
@@ -168,9 +164,8 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _to receiver of the token.
    * @param _rewards total rewards of this NFT.
    */
-  function reserveToken(uint256 _tokenId, address _to, uint256 _rewards) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
+  function reserveToken(uint256 _tokenId, address _to) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
     super._create(_to, _tokenId);
-    rewards[_tokenId] = _rewards;
   }
 
   /**
@@ -270,8 +265,6 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
       tokenAccess[_tokenId][1] = address(0);
     }
     _transferFrom(idToOwner[_tokenId], _newOwner, _tokenId);
-    reward = rewards[_tokenId];
-    delete rewards[_tokenId];
   }
 
   /**
@@ -287,7 +280,6 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     idToUri[_tokenId] = "";
     tokenAccess[_tokenId][0] = address(0);
     tokenAccess[_tokenId][1] = address(0);
-    rewards[_tokenId] = 0;
     Cert memory _emptyCert = Cert({
              tokenIssuer : address(0),
              tokenCreationDate: 0,
@@ -391,14 +383,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
       _recoveryRequest = recoveryRequest[_tokenId];
   }
 
-  /**
-   * @notice The rewards for a given Token ID.
-   * @param _tokenId Id for which we want the rewards.
-   * @return Rewards of _tokenId.
-   */
-  function getRewards(uint256 _tokenId) external view returns(uint256){
-      return rewards[_tokenId];
-  }
+  
 
   /**
    * @notice Check if an operator is valid for a given NFT.
@@ -465,7 +450,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
 
     emit Hydrated(_tokenId, _imprint, _uri, _initialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _tokenCreation);
 
-    return rewards[_tokenId];
+
   }
 
   /**
@@ -484,8 +469,14 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    */
   function _transferFrom(address _to, address _from, uint256 _tokenId) internal override {
     require(store.canTransfer(_to, _from, _tokenId));
+
+    if(firstTransfer){
+      store.dispatchRewards(_tokenId, _to);
+    }
+
     super._transferFrom(_to, _from, _tokenId);
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _to);
+
   }
 }
 
