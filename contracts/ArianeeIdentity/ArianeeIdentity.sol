@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArianeeIdentity is Ownable {
+contract ArianeeIdentity is Ownable, ERC2771Recipient {
   /**
    * @dev A descriptive name.
    */
@@ -48,20 +49,20 @@ contract ArianeeIdentity is Ownable {
    * @dev Mapping from addressId to address.
    */
   mapping(bytes3=>address) internal addressListing;
-  
+
   address public bouncerAddress;
   address public validatorAddress;
-   
+
   /**
    * @dev This emits when a new address is approved.
    */
   event AddressApprovedAdded(address _newIdentity, bytes3 _addressId);
-   
+
   /**
    * @dev This emits when an address is removed from approvedList.
    */
   event AddressApprovedRemoved(address _newIdentity);
-   
+
   /**
    * @dev This emits when a new address is approved.
    */
@@ -76,12 +77,12 @@ contract ArianeeIdentity is Ownable {
    * @dev This emits when an identity change is validated by the contract owner.
    */
   event IdentityCompromised(address _identity, uint256 _compromiseDate);
-  
+
   /**
    * @dev This emits when a new address is set.
    */
   event SetAddress(string _addressType, address _newAddress);
-   
+
   /**
     * @dev Initialize this contract. Acts as a constructor
     * @param _newBouncerAddress Address of the bouncer.
@@ -93,7 +94,15 @@ contract ArianeeIdentity is Ownable {
     updateBouncerAddress(_newBouncerAddress);
     updateValidatorAddress(_newValidatorAddress);
   }
-  
+
+  function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+    return ERC2771Recipient._msgSender();
+  }
+
+  function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+    ret = ERC2771Recipient._msgData();
+  }
+
   /**
    * @dev Add a new address to approvedList
    * @notice allow an address to create/update his URI and Imprint.
@@ -102,26 +111,26 @@ contract ArianeeIdentity is Ownable {
    * @return Id for address in bytes3.
    */
   function addAddressToApprovedList(address _newIdentity) external returns (bytes3) {
-    require(msg.sender == bouncerAddress);
+    require(_msgSender() == bouncerAddress);
     approvedList[_newIdentity] = true;
-    
+
     bytes memory _bytesAddress = abi.encodePacked(_newIdentity);
     bytes3 _addressId = _convertBytesToBytes3(_bytesAddress);
-    
+
     addressListing[_addressId] = _newIdentity;
-    
+
     emit AddressApprovedAdded(_newIdentity, _addressId);
-    
+
     return _addressId;
   }
-  
+
   /**
    * @dev Remove an address from approvedList.
    * @notice Can only be called by the bouncer.
    * @param _identity to delete from the approvedList.
    */
   function removeAddressFromApprovedList(address _identity) external {
-    require(msg.sender == bouncerAddress);
+    require(_msgSender() == bouncerAddress);
     approvedList[_identity] = false;
     emit AddressApprovedRemoved(_identity);
   }
@@ -131,14 +140,14 @@ contract ArianeeIdentity is Ownable {
    * @param _uri URI to update.
    * @param _imprint Imprint to update
    */
-  function updateInformations(string calldata _uri, bytes32 _imprint) external isApproved(msg.sender) {
-    addressToWaitingUri[msg.sender] = _uri;
-    addressToWaitingImprint[msg.sender] = _imprint;
-    
-    emit URIUpdated(msg.sender, _uri, _imprint);
+  function updateInformations(string calldata _uri, bytes32 _imprint) external isApproved(_msgSender()) {
+    addressToWaitingUri[_msgSender()] = _uri;
+    addressToWaitingImprint[_msgSender()] = _imprint;
+
+    emit URIUpdated(_msgSender(), _uri, _imprint);
   }
-  
-  
+
+
   /**
    * @dev Validate waiting informations provided by the identity.
    * @notice Can only be called by the validator.
@@ -146,10 +155,10 @@ contract ArianeeIdentity is Ownable {
    * @param _identity address to be validated.
    */
   function validateInformation(address _identity, string calldata _uriToValidate, bytes32 _imprintToValidate) external {
-    require(msg.sender == validatorAddress);
+    require(_msgSender() == validatorAddress);
     require(addressToWaitingImprint[_identity] == _imprintToValidate);
     require(keccak256(abi.encodePacked(addressToWaitingUri[_identity])) == keccak256(abi.encodePacked(_uriToValidate)));
-    
+
     addressToUri[_identity] = addressToWaitingUri[_identity];
     addressToImprint[_identity] =  addressToWaitingImprint[_identity];
 
@@ -166,11 +175,11 @@ contract ArianeeIdentity is Ownable {
    * @param _compromiseDate compromise date
    */
   function updateCompromiseDate(address _identity, uint256 _compromiseDate) external {
-    require(msg.sender == bouncerAddress);
+    require(_msgSender() == bouncerAddress);
     compromiseDate[_identity] = _compromiseDate;
     emit IdentityCompromised(_identity, _compromiseDate);
   }
-  
+
   /**
    * @notice Check if an address is approved.
    * @param _identity address of the identity.
@@ -179,7 +188,7 @@ contract ArianeeIdentity is Ownable {
   function addressIsApproved(address _identity) external view returns (bool _isApproved) {
       _isApproved = approvedList[_identity];
   }
-  
+
   /**
    * @notice The uri of a given identity.
    * @param _identity address of the identity.
@@ -188,7 +197,7 @@ contract ArianeeIdentity is Ownable {
   function addressURI(address _identity) external view returns (string memory _uri) {
       _uri = addressToUri[_identity];
   }
-  
+
   /**
    * @notice The imprint for a given identity.
    * @param _identity address of the identity.
@@ -206,7 +215,7 @@ contract ArianeeIdentity is Ownable {
   function waitingURI(address _identity) external view returns(string memory _waitingUri) {
       _waitingUri = addressToWaitingUri[_identity];
   }
-  
+
   /**
    * @notice The waiting imprint for a given identity.
    * @param _identity address of the identity.
@@ -215,7 +224,7 @@ contract ArianeeIdentity is Ownable {
   function waitingImprint(address _identity) external view returns(bytes32 _waitingImprint) {
       _waitingImprint = addressToWaitingImprint[_identity];
   }
-  
+
   /**
    * @notice The compromise date for a given identity.
    * @param _identity address of the identity.
@@ -233,7 +242,7 @@ contract ArianeeIdentity is Ownable {
   function addressFromId(bytes3 _id) external view returns(address _identity) {
       _identity = addressListing[_id];
   }
-  
+
   /**
    * @dev Change address of the bouncer.
    * @param _newBouncerAddress new address of the bouncer.
@@ -242,7 +251,7 @@ contract ArianeeIdentity is Ownable {
     bouncerAddress = _newBouncerAddress;
     emit SetAddress("bouncerAddress", _newBouncerAddress);
   }
-  
+
   /**
    * @dev Change address of the validator.
    * @param _newValidatorAddress new address of the validator.
@@ -251,7 +260,7 @@ contract ArianeeIdentity is Ownable {
     validatorAddress = _newValidatorAddress;
     emit SetAddress("validatorAddress", _newValidatorAddress);
   }
-  
+
   /**
    * @dev Check if an address is approved.
    * @param _identity The address to check.

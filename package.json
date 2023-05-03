@@ -13,9 +13,10 @@
     "deployTestnet": "truffle migrate --network arianeeTest --reset; node createIdentity.js --network arianeeTest --identityAddress 0x59d3631c86BbE35EF041872d502F218A39FBa150 --storeAddress 0xe982E462b094850F12AF94d21D470e21bE9D0E9C --ariaAddress 0xCfEB869F69431e42cdB54A4F4f105C19C080A601"
   },
   "dependencies": {
-    "@0xcert/ethereum-erc721-contracts": "^1.7.0",
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",
+    "@0xcert/ethereum-erc721-contracts": "^1.7.0",
     "@0xcert/ethereum-utils-contracts": "^1.7.0",
+    "@opengsn/contracts": "^3.0.0-beta.6",
     "@openzeppelin/contracts": "^4.8.3",
     "big-number": "^2.0.0",
     "truffle-hdwallet-provider": "^1.0.10"

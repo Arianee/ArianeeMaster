@@ -109,7 +109,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
 
 
   /**
-   * @dev Check if the msg.sender can operate the NFT.
+   * @dev Check if the _msgSender() can operate the NFT.
    * @param _tokenId ID of the NFT to test.
    * @param _operator Address to test.
    */
@@ -119,11 +119,11 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   }
 
   /**
-   * @dev Check if msg.sender is the issuer of a NFT.
+   * @dev Check if _msgSender() is the issuer of a NFT.
    * @param _tokenId ID of the NFT to test.
    */
    modifier isIssuer(uint256 _tokenId) {
-    require(msg.sender == certificate[_tokenId].tokenIssuer);
+    require(_msgSender() == certificate[_tokenId].tokenIssuer);
     _;
    }
 
@@ -142,6 +142,14 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     // _setUriBase("https://cert.arianee.org/");
     _setUri("https://cert.arianee.org/", "");
   }
+
+  function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+        return ERC2771Recipient._msgSender();
+    }
+
+    function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+        ret = ERC2771Recipient._msgData();
+    }
 
   /**
    * @notice Change address of the store infrastructure.
@@ -227,7 +235,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _enable Enable or disable the token access.
    * @param _tokenType Type of token access (0=view, 1=tranfer).
    */
-  function addTokenAccess(uint256 _tokenId, address _key, bool _enable, uint256 _tokenType) external isOperator(_tokenId, msg.sender) whenNotPaused() {
+  function addTokenAccess(uint256 _tokenId, address _key, bool _enable, uint256 _tokenType) external isOperator(_tokenId, _msgSender()) whenNotPaused() {
       require(_tokenType>0);
     if (_enable) {
       tokenAccess[_tokenId][_tokenType] = _key;
@@ -256,7 +264,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     bytes32 message = keccak256(abi.encode(_tokenId, _newOwner));
     require(ECDSA.toEthSignedMessageHash(message) == _hash);
 
-    idToApproval[_tokenId] = msg.sender;
+    idToApproval[_tokenId] = _msgSender();
 
     if(!_keepRequestToken){
       tokenAccess[_tokenId][1] = address(0);
@@ -272,7 +280,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _tokenId to destroy.
    */
   function destroy(uint256 _tokenId) external whenNotPaused() {
-    require(store.canDestroy(_tokenId, msg.sender));
+    require(store.canDestroy(_tokenId, _msgSender()));
 
     _destroy(_tokenId);
     idToImprint[_tokenId] = "";

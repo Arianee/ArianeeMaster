@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../Interfaces/IArianeeSmartAsset.sol";
 import "../Interfaces/IArianeeWhitelist.sol";
 
-contract ArianeeMessage is Ownable {
+contract ArianeeMessage is Ownable, ERC2771Recipient {
   /**
    * @dev Mapping from receiver address to messagesId [].
    */
@@ -48,8 +49,16 @@ contract ArianeeMessage is Ownable {
     smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
   }
 
+  function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+    return ERC2771Recipient._msgSender();
+  }
+
+  function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+    ret = ERC2771Recipient._msgData();
+  }
+
   modifier onlyStore() {
-    require(msg.sender == arianeeStoreAddress);
+    require(_msgSender() == arianeeStoreAddress);
     _;
   }
 

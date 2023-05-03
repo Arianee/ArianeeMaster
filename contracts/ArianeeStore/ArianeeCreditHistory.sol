@@ -2,8 +2,9 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 
-contract ArianeeCreditHistory is Ownable {
+contract ArianeeCreditHistory is Ownable, ERC2771Recipient {
   /**
    * @dev Mapping from address to array of creditHistory by type of credit.
    */
@@ -29,13 +30,20 @@ contract ArianeeCreditHistory is Ownable {
       uint256 quantity;
   }
 
+  function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+    return ERC2771Recipient._msgSender();
+  }
+
+  function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+    ret = ERC2771Recipient._msgData();
+  }
   /**
    * @dev This emits when a new address is set.
    */
   event SetAddress(string _addressType, address _newAddress);
 
   modifier onlyStore(){
-      require(msg.sender == arianeeStoreAddress, 'not called by store');
+      require(_msgSender() == arianeeStoreAddress, 'not called by store');
       _;
   }
 

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "../Interfaces/IArianeeSmartAsset.sol";
 import "../Interfaces/IArianeeWhitelist.sol";
 
-contract ArianeeUserAction {
+contract ArianeeUserAction is ERC2771Recipient {
   IArianeeWhitelist whitelist;
   IArianeeSmartAsset smartAsset;
 
@@ -13,9 +14,10 @@ contract ArianeeUserAction {
     smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
   }
 
+
   function addAddressToWhitelist(uint256 _tokenId, address _address) external {
     address _owner = smartAsset.ownerOf(_tokenId);
-    require(_owner == msg.sender, "You are not the owner of this certificate");
+    require(_owner == _msgSender(), "You are not the owner of this certificate");
 
     whitelist.addWhitelistedAddress(_tokenId, _address);
   }
