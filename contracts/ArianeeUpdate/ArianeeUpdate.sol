@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../Interfaces/IArianeeSmartAsset.sol";
 
-contract ArianeeUpdate is Ownable {
+contract ArianeeUpdate is Ownable, ERC2771Recipient {
 
   /**
    * Interface for connected contract.
@@ -39,6 +40,14 @@ contract ArianeeUpdate is Ownable {
       smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
   }
 
+  function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+    return ERC2771Recipient._msgSender();
+  }
+
+  function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+    ret = ERC2771Recipient._msgData();
+  }
+
   /**
    * @dev This emits when a certificate is updated.
    */
@@ -64,7 +73,7 @@ contract ArianeeUpdate is Ownable {
    * @param _reward total rewards of this event.
    */
   function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _issuer, uint256 _reward) external {
-        require(msg.sender == storeAddress);
+        require(_msgSender() == storeAddress);
         require(_issuer == smartAsset.issuerOf(_tokenId));
 
         smartAssetUpdate[_tokenId] = Update({
@@ -83,7 +92,7 @@ contract ArianeeUpdate is Ownable {
    * @param _from address of the initial caller (must be able to operate the NFT).
    */
   function readUpdateSmartAsset(uint256 _tokenId, address _from) external returns(uint256){
-      require(msg.sender == storeAddress);
+      require(_msgSender() == storeAddress);
       require(smartAsset.canOperate(_tokenId, _from));
 
       uint256 _reward = rewards[_tokenId];

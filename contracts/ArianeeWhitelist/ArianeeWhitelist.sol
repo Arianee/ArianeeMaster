@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "../Utilities/0x/Abilitable.sol";
 
-contract ArianeeWhitelist is Abilitable {
+contract ArianeeWhitelist is Abilitable, ERC2771Recipient {
   /**
    * @dev Mapping from  token id to whitelisted address
    */
   mapping(uint256=> mapping(address=>bool)) internal whitelistedAddress;
-  
+
   /**
    * @dev Mapping from address to token to blacklisted address.
    */
@@ -23,7 +24,7 @@ contract ArianeeWhitelist is Abilitable {
    * @dev This emits when an address is blacklisted by a NFT owner on a given token.
    */
   event BlacklistedAddresAdded(address _sender, uint256 _tokenId, bool _activate);
-  
+
   uint8 constant ABILITY_ADD_WHITELIST = 2;
 
   /**
@@ -43,10 +44,10 @@ contract ArianeeWhitelist is Abilitable {
    * @param _activate blacklist or unblacklist the sender
    */
   function addBlacklistedAddress(address _sender, uint256 _tokenId, bool _activate) external {
-      optOutAddressPerOwner[msg.sender][_tokenId][_sender] = _activate;
+      optOutAddressPerOwner[_msgSender()][_tokenId][_sender] = _activate;
       emit BlacklistedAddresAdded(_sender, _tokenId, _activate);
   }
-  
+
   /**
    * @dev Return if a sender is authorized to send  message to this owner.
    * @param _tokenId NFT to check.

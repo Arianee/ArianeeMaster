@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
-
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "./IERC721.sol";
 import "./IERC721Metadata.sol";
 import "./IERC721Enumerable.sol";
@@ -15,7 +15,8 @@ contract NFTokenMetadataEnumerable is
   ERC721,
   ERC721Metadata,
   ERC721Enumerable,
-  SupportsInterface
+  SupportsInterface,
+  ERC2771Recipient
 {
   using AddressUtils for address;
 
@@ -105,7 +106,7 @@ contract NFTokenMetadataEnumerable is
 
   /**
    * @dev Transfers the ownership of an NFT from one address to another address.
-   * @notice Throws unless `msg.sender` is the current owner, an authorized operator, or the
+   * @notice Throws unless `_msgSender()` is the current owner, an authorized operator, or the
    * approved address for this NFT. Throws if `_from` is not the current owner. Throws if `_to` is
    * the zero address. Throws if `_tokenId` is not a valid NFT. When transfer is complete, this
    * function checks if `_to` is a smart contract (code size > 0). If so, it calls
@@ -148,7 +149,7 @@ contract NFTokenMetadataEnumerable is
   }
 
   /**
-   * @dev Throws unless `msg.sender` is the current owner, an authorized operator, or the approved
+   * @dev Throws unless `_msgSender()` is the current owner, an authorized operator, or the approved
    * address for this NFT. Throws if `_from` is not the current owner. Throws if `_to` is the zero
    * address. Throws if `_tokenId` is not a valid NFT.
    * @notice The caller is responsible to confirm that `_to` is capable of receiving NFTs or else
@@ -170,7 +171,7 @@ contract NFTokenMetadataEnumerable is
 
   /**
    * @dev Set or reaffirm the approved address for an NFT.
-   * @notice The zero address indicates there is no approved address. Throws unless `msg.sender` is
+   * @notice The zero address indicates there is no approved address. Throws unless `_msgSender()` is
    * the current NFT owner, or an authorized operator of the current owner.
    * @param _approved Address to be approved for the given NFT ID.
    * @param _tokenId ID of the token to be approved.
@@ -185,7 +186,7 @@ contract NFTokenMetadataEnumerable is
     // can operate
     address tokenOwner = idToOwner[_tokenId];
     require(
-      tokenOwner == msg.sender || ownerToOperators[tokenOwner][msg.sender],
+      tokenOwner == _msgSender() || ownerToOperators[tokenOwner][_msgSender()],
       NOT_OWNER_OR_OPERATOR
     );
 
@@ -195,7 +196,7 @@ contract NFTokenMetadataEnumerable is
 
   /**
    * @dev Enables or disables approval for a third party ("operator") to manage all of
-   * `msg.sender`'s assets. It also emits the ApprovalForAll event.
+   * `_msgSender()`'s assets. It also emits the ApprovalForAll event.
    * @notice This works even if sender doesn't own any tokens at the time.
    * @param _operator Address to add to the set of authorized operators.
    * @param _approved True if the operator is approved, false to revoke approval.
@@ -207,8 +208,8 @@ contract NFTokenMetadataEnumerable is
     external
     override
   {
-    ownerToOperators[msg.sender][_operator] = _approved;
-    emit ApprovalForAll(msg.sender, _operator, _approved);
+    ownerToOperators[_msgSender()][_operator] = _approved;
+    emit ApprovalForAll(_msgSender(), _operator, _approved);
   }
 
   /**
@@ -411,7 +412,7 @@ contract NFTokenMetadataEnumerable is
    * function. Its purpose is to show and properly initialize data structures when using this
    * implementation.
    * @param _to The address that will own the created NFT.
-   * @param _tokenId of the NFT to be created by the msg.sender.
+   * @param _tokenId of the NFT to be created by the _msgSender().
    */
   function _create(
     address _to,
@@ -509,9 +510,9 @@ contract NFTokenMetadataEnumerable is
 
     // can transfer
     require(
-      _from == msg.sender
-      || idToApproval[_tokenId] == msg.sender
-      || ownerToOperators[_from][msg.sender],
+      _from == _msgSender()
+      || idToApproval[_tokenId] == _msgSender()
+      || ownerToOperators[_from][_msgSender()],
       NOT_OWNER_APPROWED_OR_OPERATOR
     );
 
@@ -561,7 +562,7 @@ contract NFTokenMetadataEnumerable is
     {
       require(
         ERC721TokenReceiver(_to)
-          .onERC721Received(msg.sender, _from, _tokenId, _data) == MAGIC_ON_ERC721_RECEIVED,
+          .onERC721Received(_msgSender(), _from, _tokenId, _data) == MAGIC_ON_ERC721_RECEIVED,
         NOT_ABLE_TO_RECEIVE_NFT
       );
     }

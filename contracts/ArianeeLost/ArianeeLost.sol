@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../Interfaces/IArianeeSmartAsset.sol";
 
-contract ArianeeLost is Ownable {
+contract ArianeeLost is Ownable, ERC2771Recipient {
    /**
     * @dev Mapping from token id to missing status.
     */
@@ -79,13 +80,21 @@ contract ArianeeLost is Ownable {
         setManagerIdentity(_managerIdentity);
     }
 
+    function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
+      return ERC2771Recipient._msgSender();
+    }
+
+    function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+      ret = ERC2771Recipient._msgData();
+    }
+
     /**
      * @dev Only owner can modifier
      * @param _tokenId tokenId of certificate.
      */
     modifier onlyTokenOwner(uint256 _tokenId){
       require(
-        smartAsset.ownerOf(_tokenId) == msg.sender,
+        smartAsset.ownerOf(_tokenId) == _msgSender(),
         "Not authorized because not the owner"
         );
         _;
@@ -117,7 +126,7 @@ contract ArianeeLost is Ownable {
 
     modifier onlyManager(){
         require(
-            msg.sender == managerIdentity,
+            _msgSender() == managerIdentity,
             "You need to be the manager"
             );
             _;
@@ -125,7 +134,7 @@ contract ArianeeLost is Ownable {
 
     modifier onlyAuthorizedIdentity(){
         require(
-            authorizedIdentities[msg.sender],
+            authorizedIdentities[_msgSender()],
             "You need to be the authorized"
             );
             _;
@@ -133,7 +142,7 @@ contract ArianeeLost is Ownable {
 
     modifier onlyAuthorizedIdentityOrManager(){
         require(
-            authorizedIdentities[msg.sender] || msg.sender == managerIdentity,
+            authorizedIdentities[_msgSender()] || _msgSender() == managerIdentity,
             "You need to be the auhtorized"
             );
             _;
@@ -206,7 +215,7 @@ contract ArianeeLost is Ownable {
         require(tokenMissingStatus[_tokenId] == true);
         require(tokenStolenStatus[_tokenId] == false);
         tokenStolenStatus[_tokenId] = true;
-        tokenStolenIssuer[_tokenId] = msg.sender;
+        tokenStolenIssuer[_tokenId] = _msgSender();
         emit Stolen(_tokenId);
     }
 
@@ -216,7 +225,7 @@ contract ArianeeLost is Ownable {
      * @param _tokenId token id for which removed the stolen status.
      */
     function unsetStolenStatus(uint256 _tokenId) external onlyAuthorizedIdentityOrManager(){
-        require(msg.sender == tokenStolenIssuer[_tokenId] || msg.sender == managerIdentity);
+        require(_msgSender() == tokenStolenIssuer[_tokenId] || _msgSender() == managerIdentity);
         tokenStolenStatus[_tokenId] = false;
         tokenStolenIssuer[_tokenId] = address(0);
         emit UnStolen(_tokenId);
