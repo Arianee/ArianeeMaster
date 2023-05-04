@@ -75,9 +75,14 @@ contract ArianeeLost is Ownable, ERC2771Recipient {
      /**
       * @param _smartAssetAddress address of SmartAssetContract
       */
-    constructor(address _smartAssetAddress, address _managerIdentity) {
+    constructor(address _smartAssetAddress, address _managerIdentity, address _forwarder) {
         smartAsset = IArianeeSmartAsset(_smartAssetAddress);
         setManagerIdentity(_managerIdentity);
+        _setTrustedForwarder(_forwarder);
+    }
+
+    function updateForwarderAddress(address _forwarder) external onlyOwner {
+      _setTrustedForwarder(_forwarder);
     }
 
     function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {

@@ -66,10 +66,15 @@ contract ArianeeEvent is Ownable, Pausable, ERC2771Recipient {
     }
 
 
-    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress) {
+    constructor(address _smartAssetAddress, address _arianeeWhitelistAddress, address _forwarder) {
         arianeeWhitelist = IArianeeWhitelist(address(_arianeeWhitelistAddress));
         smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
+        _setTrustedForwarder(_forwarder);
     }
+
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
+  }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
     return ERC2771Recipient._msgSender();

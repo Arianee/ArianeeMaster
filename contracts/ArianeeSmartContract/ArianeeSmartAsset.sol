@@ -132,7 +132,8 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     * @param _arianeeWhitelistAddress Address of the whitelist contract.
     */
   constructor(
-    address _arianeeWhitelistAddress
+    address _arianeeWhitelistAddress,
+    address _forwarder
   )
   {
     nftName = "Arianee";
@@ -141,6 +142,11 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     // 28.04.2023: Keeping the same behaviour with the new _setUri function, passing an empty string as postfix parameter
     // _setUriBase("https://cert.arianee.org/");
     _setUri("https://cert.arianee.org/", "");
+    _setTrustedForwarder(_forwarder);
+  }
+
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
   }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {

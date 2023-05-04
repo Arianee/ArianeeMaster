@@ -88,11 +88,16 @@ contract ArianeeIdentity is Ownable, ERC2771Recipient {
     * @param _newBouncerAddress Address of the bouncer.
     * @param _newValidatorAddress Address of the validator.
     */
-  constructor(address _newBouncerAddress, address _newValidatorAddress) {
+  constructor(address _newBouncerAddress, address _newValidatorAddress, address _forwarder) {
     name = "Arianee Identity";
     symbol = "AriaID";
     updateBouncerAddress(_newBouncerAddress);
     updateValidatorAddress(_newValidatorAddress);
+    _setTrustedForwarder(_forwarder);
+  }
+
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
   }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {

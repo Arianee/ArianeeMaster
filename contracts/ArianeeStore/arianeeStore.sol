@@ -123,6 +123,9 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         _setTrustedForwarder(_forwarder);
     }
 
+    function updateForwarderAddress(address _forwarder) external onlyOwner {
+        _setTrustedForwarder(_forwarder);
+    }
 
     /**
      * @notice Change address of the authorized exchange address.

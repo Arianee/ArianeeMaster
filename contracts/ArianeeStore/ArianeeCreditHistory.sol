@@ -30,6 +30,14 @@ contract ArianeeCreditHistory is Ownable, ERC2771Recipient {
       uint256 quantity;
   }
 
+  constructor(address _forwarder){
+      _setTrustedForwarder(_forwarder);
+  }
+  
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
+  }
+
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
     return ERC2771Recipient._msgSender();
   }

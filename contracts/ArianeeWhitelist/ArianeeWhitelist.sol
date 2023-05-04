@@ -27,6 +27,14 @@ contract ArianeeWhitelist is Abilitable, ERC2771Recipient {
 
   uint8 constant ABILITY_ADD_WHITELIST = 2;
 
+  constructor(address _forwarder) {
+    _setTrustedForwarder(_forwarder);
+  }
+
+  function updateForwarderAddress(address _forwarder) external hasAbilities(1) {
+    _setTrustedForwarder(_forwarder);
+  }
+
   /**
    * @dev add an address to the whitelist for a nft.
    * @notice can only be called by contract authorized.

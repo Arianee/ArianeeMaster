@@ -27,14 +27,14 @@ async function deployProtocol(deployer, network, accounts) {
   await deployer.deploy(Aria);
 
   const ariaInstance = await deployer.deploy(Aria);
-  const whiteListInstance = await deployer.deploy(Whitelist);
-  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address);
-  const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address);
-  const creditHistoryInstance = await deployer.deploy(CreditHistory);
-  const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address);
-  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address, lostManager);
-  const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address);
-  const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address);
+  const whiteListInstance = await deployer.deploy(Whitelist, forwarder);
+  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, forwarder);
+  const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
+  const creditHistoryInstance = await deployer.deploy(CreditHistory, forwarder);
+  const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address, forwarder);
+  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address, lostManager, forwarder);
+  const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address, forwarder);
+  const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
 
 
   const arianeeStoreInstance = await deployer.deploy(
@@ -53,7 +53,7 @@ async function deployProtocol(deployer, network, accounts) {
     forwarder
   );
 
-  const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress);
+  const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress, forwarder);
 
   await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
   await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
