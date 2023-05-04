@@ -26,16 +26,17 @@ contract('Cross Contracts', (accounts) => {
     const validatorAddress = accounts[0];
     const ownerAddress = accounts[0];
     const lostManager = accounts[0];
+    const forwarder = '0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B';
 
     ariaInstance = await Aria.new();
-    whiteListInstance = await Whitelist.new();
-    arianeeSmartAssetInstance = await ArianeeSmartAsset.new(whiteListInstance.address);
-    messageInstance = await ArianeeMessage.new(whiteListInstance.address, arianeeSmartAssetInstance.address);
-    creditHistoryInstance = await CreditHistory.new();
-    arianeeEventInstance = await ArianeeEvent.new(arianeeSmartAssetInstance.address, whiteListInstance.address);
-    arianeeLost = await ArianeeLost.new(arianeeSmartAssetInstance.address, lostManager);
-    arianeeUpdate = await ArianeeUpdate.new(arianeeSmartAssetInstance.address);
-    arianeeUserAction = await ArianeeUserAction.new(whiteListInstance.address, arianeeSmartAssetInstance.address);
+    whiteListInstance = await Whitelist.new(forwarder);
+    arianeeSmartAssetInstance = await ArianeeSmartAsset.new(whiteListInstance.address, forwarder);
+    messageInstance = await ArianeeMessage.new(whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
+    creditHistoryInstance = await CreditHistory.new(forwarder);
+    arianeeEventInstance = await ArianeeEvent.new(arianeeSmartAssetInstance.address, whiteListInstance.address, forwarder);
+    arianeeLost = await ArianeeLost.new(arianeeSmartAssetInstance.address, lostManager, forwarder);
+    arianeeUpdate = await ArianeeUpdate.new(arianeeSmartAssetInstance.address, forwarder);
+    arianeeUserAction = await ArianeeUserAction.new(whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
 
 
     arianeeStoreInstance = await ArianeeStore.new(
@@ -49,10 +50,11 @@ contract('Cross Contracts', (accounts) => {
       '10',
       '10',
       '10',
-      '10'
+      '10',
+      forwarder
     );
 
-    const identityInstance = ArianeeIdentity.new(bouncerAddress, validatorAddress);
+    const identityInstance = ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarder);
 
     arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
     arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
@@ -118,14 +120,18 @@ contract('Cross Contracts', (accounts) => {
 
     await arianeeStoreInstance.methods['requestToken(uint256,bytes32,bool,address,bytes)'](1, signedMessage.messageHash, true, accounts[5], signedMessage.signature, {from: accounts[6]});
 
+
+    const nftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[6]);
+
     let count = [];
     count[0] = await ariaInstance.balanceOf(accounts[0]);
     count[1] = (await ariaInstance.balanceOf(accounts[1])).toString();
     count[2] = await ariaInstance.balanceOf(accounts[2]);
     count[3] = await ariaInstance.balanceOf(accounts[3]);
-    count[4] = await ariaInstance.balanceOf(accounts[4]);
+    count[4] = (await ariaInstance.balanceOf(accounts[4])).toString();
     count[5] = await ariaInstance.balanceOf(accounts[5]);
     count[6] = await ariaInstance.balanceOf(accounts[6]);
+
 
     const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
 
@@ -136,6 +142,8 @@ contract('Cross Contracts', (accounts) => {
     assert.equal(count[4], 200000000000000000);
     assert.equal(count[5], 200000000000000000);
     assert.equal(count[6], 100000000000000000);
+
+    assert.equal(nftBalance, 1);
 
   });
 

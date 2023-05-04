@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../Utilities/0x/NFTokenMetadataEnumerable.sol";
 import "../Utilities/0x/Abilitable.sol";
 import "../Interfaces/IArianeeWhitelist.sol";
-import "../Interfaces/iArianeeStore.sol";
+import "../Interfaces/IArianeeStore.sol";
 
 /// @title Contract handling Arianee Certificates.
 contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pausable {
@@ -32,14 +32,14 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   mapping(uint256=>bool) internal recoveryRequest;
 
   /**
-   * @dev Mapping from token id to total rewards for this NFT.
-   */
-  mapping(uint256=>uint256) internal rewards;
-
-  /**
    * @dev Mapping from token id to Cert.
    */
   mapping(uint256 => Cert) internal certificate;
+
+  /**
+   * @dev Mapping from token id to a boolean that indicates whether the first transfer has been done or not.
+   */
+  mapping (uint256 => bool) internal idToFirstTransfer;
 
   /**
    * @dev This emits when a new address is set.
@@ -172,11 +172,10 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @dev Can only be called by an authorized address.
    * @param _tokenId ID to reserve.
    * @param _to receiver of the token.
-   * @param _rewards total rewards of this NFT.
    */
-  function reserveToken(uint256 _tokenId, address _to, uint256 _rewards) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
+  function reserveToken(uint256 _tokenId, address _to) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
     super._create(_to, _tokenId);
-    rewards[_tokenId] = _rewards;
+    idToFirstTransfer[_tokenId] = true;
   }
 
   /**
@@ -262,22 +261,19 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _hash Hash of tokenId + newOwner address.
    * @param _keepRequestToken If false erase the access token of the NFT.
    * @param _newOwner Address of the new owner of the NFT.
-   * @return reward total rewards of this NFT.
    */
-  function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() returns(uint256 reward){
-
+  function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
     require(isTokenValid(_tokenId, _hash, 1, _signature));
     bytes32 message = keccak256(abi.encode(_tokenId, _newOwner));
     require(ECDSA.toEthSignedMessageHash(message) == _hash);
 
     idToApproval[_tokenId] = _msgSender();
 
-    if(!_keepRequestToken){
+    if (!_keepRequestToken) {
       tokenAccess[_tokenId][1] = address(0);
     }
+
     _transferFrom(idToOwner[_tokenId], _newOwner, _tokenId);
-    reward = rewards[_tokenId];
-    delete rewards[_tokenId];
   }
 
   /**
@@ -289,18 +285,15 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     require(store.canDestroy(_tokenId, _msgSender()));
 
     _destroy(_tokenId);
-    idToImprint[_tokenId] = "";
-    idToUri[_tokenId] = "";
-    tokenAccess[_tokenId][0] = address(0);
-    tokenAccess[_tokenId][1] = address(0);
-    rewards[_tokenId] = 0;
-    Cert memory _emptyCert = Cert({
-             tokenIssuer : address(0),
-             tokenCreationDate: 0,
-             tokenRecoveryTimestamp: 0
-            });
 
-    certificate[_tokenId] = _emptyCert;
+    delete idToFirstTransfer[_tokenId];
+    delete idToImprint[_tokenId];
+    delete idToUri[_tokenId];
+
+    delete tokenAccess[_tokenId][0];
+    delete tokenAccess[_tokenId][1];
+
+    delete certificate[_tokenId];
 
     emit TokenDestroyed(_tokenId);
   }
@@ -398,15 +391,6 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   }
 
   /**
-   * @notice The rewards for a given Token ID.
-   * @param _tokenId Id for which we want the rewards.
-   * @return Rewards of _tokenId.
-   */
-  function getRewards(uint256 _tokenId) external view returns(uint256){
-      return rewards[_tokenId];
-  }
-
-  /**
    * @notice Check if an operator is valid for a given NFT.
    * @param _tokenId nft to check.
    * @param _operator operator to check.
@@ -448,7 +432,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _tokenRecoveryTimestamp Limit date for the issuer to be able to transfer back the NFT.
    * @param _initialKeyIsRequestKey If true set initial key as request key.
    */
-  function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) public hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() isOperator(_tokenId, _owner) returns(uint256){
+  function hydrateToken(uint256 _tokenId, bytes32 _imprint, string memory _uri, address _initialKey, uint256 _tokenRecoveryTimestamp, bool _initialKeyIsRequestKey, address _owner) public hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() isOperator(_tokenId, _owner) {
     require(!(certificate[_tokenId].tokenCreationDate > 0), NFT_ALREADY_SET);
     uint256 _tokenCreation = block.timestamp;
     tokenAccess[_tokenId][0] = _initialKey;
@@ -470,8 +454,6 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     certificate[_tokenId] = _cert;
 
     emit Hydrated(_tokenId, _imprint, _uri, _initialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _tokenCreation);
-
-    return rewards[_tokenId];
   }
 
   /**
@@ -488,9 +470,16 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @notice Legacy function of TransferFrom, add the new owner as whitelisted for the message.
    * @dev Require the store to approve the transfer.
    */
-  function _transferFrom(address _to, address _from, uint256 _tokenId) internal override {
+  function _transferFrom(address _from, address _to, uint256 _tokenId) internal override {
     require(store.canTransfer(_to, _from, _tokenId));
-    super._transferFrom(_to, _from, _tokenId);
+
+    bool isFirstTransfer = idToFirstTransfer[_tokenId] == true;
+    if (isFirstTransfer) {
+      idToFirstTransfer[_tokenId] = false;
+      store.dispatchRewardsAtFirstTransfer(_tokenId, _to);
+    }
+
+    super._transferFrom(_from, _to, _tokenId);
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _to);
   }
 }
