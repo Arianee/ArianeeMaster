@@ -44,9 +44,14 @@ contract ArianeeMessage is Ownable, ERC2771Recipient {
    */
   event MessageRead(address indexed _receiver, address indexed _sender, uint256 indexed _messageId);
 
-  constructor(address _whitelistAddress, address _smartAssetAddress) {
+  constructor(address _whitelistAddress, address _smartAssetAddress, address _trustedForwarder){
     whitelist = IArianeeWhitelist(address(_whitelistAddress));
     smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
+    _setTrustedForwarder(_trustedForwarder);
+  }
+
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
   }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {

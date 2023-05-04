@@ -36,8 +36,13 @@ contract ArianeeUpdate is Ownable, ERC2771Recipient {
         uint256 updateTimestamp;
     }
 
-  constructor(address _smartAssetAddress) {
+  constructor(address _smartAssetAddress, address _forwarder) {
       smartAsset = IArianeeSmartAsset(address(_smartAssetAddress));
+      _setTrustedForwarder(_forwarder);
+  }
+
+  function updateForwarderAddress(address _forwarder) external onlyOwner {
+    _setTrustedForwarder(_forwarder);
   }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
