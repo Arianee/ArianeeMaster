@@ -147,7 +147,12 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     isSoulbound = _isSoulbound;
 
     setWhitelistAddress(_arianeeWhitelistAddress);
-    _setUriBase("https://cert.arianee.org/");
+
+    // 28.04.2023: Keeping the same behaviour with the new _setUri function, passing an empty string as postfix parameter
+    // _setUriBase(_newURIBase);
+    _setUri("https://cert.arianee.org/", "");
+
+    _setTrustedForwarder(_forwarder);
   }
 
   function updateForwarderAddress(address _forwarder) external onlyOwner {

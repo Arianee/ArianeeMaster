@@ -12,6 +12,7 @@ const ArianeeMessage = artifacts.require('ArianeeMessage');
 const ArianeeUpdate = artifacts.require('ArianeeUpdate');
 const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 
+const SMART_ASSET_IS_SOULBOUND = false;
 
 async function deployProtocol(deployer, network, accounts) {
   const { forwarderAddress } = await GsnTestEnvironment.loadDeployment();
@@ -23,16 +24,13 @@ async function deployProtocol(deployer, network, accounts) {
   const validatorAddress = accounts[0];
   const ownerAddress = accounts[0];
   const lostManager = accounts[0];
-  const forwarder = '0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B';
-
-  const smartAssetIsSoulbound = true;
 
   // need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(Aria);
 
   const ariaInstance = await deployer.deploy(Aria);
   const whiteListInstance = await deployer.deploy(Whitelist, forwarderAddress);
-  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, forwarderAddress, smartAssetIsSoulbound);
+  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, forwarderAddress, SMART_ASSET_IS_SOULBOUND);
   const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarderAddress);
   const creditHistoryInstance = await deployer.deploy(CreditHistory, forwarderAddress);
   const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address, forwarderAddress);
