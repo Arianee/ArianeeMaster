@@ -95,7 +95,7 @@ async function deployProtocol(deployer, network, accounts) {
       "updateSmartAssets": arianeeUpdate.address
     },
     'httpProvider': 'http://localhost:8545',
-    'chainId': 42
+    'chainId': 5777
   };
 
   console.log('###########################');

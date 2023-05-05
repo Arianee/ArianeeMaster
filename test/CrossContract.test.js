@@ -158,7 +158,6 @@ contract("Cross Contracts", (accounts) => {
     );
 
     const nftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[6]);
-    const nftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[6]);
 
     let count = [];
     count[0] = await ariaInstance.balanceOf(accounts[0]);
@@ -170,7 +169,6 @@ contract("Cross Contracts", (accounts) => {
     count[6] = await ariaInstance.balanceOf(accounts[6]);
 
 
-    const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
     const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
 
     assert.equal(storeBalance, 0);
