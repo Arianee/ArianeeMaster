@@ -42,6 +42,11 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   mapping (uint256 => bool) internal idToFirstTransfer;
 
   /**
+   * @dev Flag indicating if the NFT is a soulbound token (non-transferable) or not.
+   */
+  bool public isSoulbound;
+
+  /**
    * @dev This emits when a new address is set.
    */
   event SetAddress(string _addressType, address _newAddress);
@@ -133,16 +138,16 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     */
   constructor(
     address _arianeeWhitelistAddress,
-    address _forwarder
+    address _forwarder,
+    bool _isSoulbound
   )
   {
     nftName = "Arianee";
     nftSymbol = "Arianee";
+    isSoulbound = _isSoulbound;
+
     setWhitelistAddress(_arianeeWhitelistAddress);
-    // 28.04.2023: Keeping the same behaviour with the new _setUri function, passing an empty string as postfix parameter
-    // _setUriBase("https://cert.arianee.org/");
-    _setUri("https://cert.arianee.org/", "");
-    _setTrustedForwarder(_forwarder);
+    _setUriBase("https://cert.arianee.org/");
   }
 
   function updateForwarderAddress(address _forwarder) external onlyOwner {
@@ -150,12 +155,12 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   }
 
   function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
-        return ERC2771Recipient._msgSender();
-    }
+    return ERC2771Recipient._msgSender();
+  }
 
-    function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
-        ret = ERC2771Recipient._msgData();
-    }
+  function _msgData() internal override(Context, ERC2771Recipient) view returns (bytes calldata ret) {
+    ret = ERC2771Recipient._msgData();
+  }
 
   /**
    * @notice Change address of the store infrastructure.
@@ -282,7 +287,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _tokenId to destroy.
    */
   function destroy(uint256 _tokenId) external whenNotPaused() {
-    require(store.canDestroy(_tokenId, _msgSender()));
+    require(store.canDestroy(_tokenId, _msgSender(), isSoulbound));
 
     _destroy(_tokenId);
 
@@ -467,20 +472,42 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   }
 
   /**
-   * @notice Legacy function of TransferFrom, add the new owner as whitelisted for the message.
+   * @notice Override of the _transferFrom function that perform multiple checks depending on the token type.
    * @dev Require the store to approve the transfer.
+   * @dev Dispatch the rewards at the first transfer of a token.
    */
   function _transferFrom(address _from, address _to, uint256 _tokenId) internal override {
-    require(store.canTransfer(_to, _from, _tokenId));
+    require(store.canTransfer(_from, _to, _tokenId, isSoulbound), "ArianeeSmartAsset: Transfer rejected by the store");
 
-    bool isFirstTransfer = idToFirstTransfer[_tokenId] == true;
-    if (isFirstTransfer) {
-      idToFirstTransfer[_tokenId] = false;
-      store.dispatchRewardsAtFirstTransfer(_tokenId, _to);
+    if (isSoulbound) {
+      address tokenOwner = idToOwner[_tokenId];
+      require(tokenOwner == _from, NOT_VALID_NFT);
+
+      address tokenIssuer = certificate[_tokenId].tokenIssuer;
+
+      // If the owner is NOT the issuer, the token is soulbound and the transfer can be made only by the issuer to change the owner if needed
+      if (tokenOwner != tokenIssuer) {
+        require(tokenIssuer == _msgSender(), "ArianeeSmartAsset: Only the issuer can transfer a soulbound token");
+      }
+
+      /*
+      * If the previous condition has not been hit, the owner IS the issuer and the token is not soulbound yet or not anymore for a limited time.
+      * This is either the first transfer of the token to its first "real" owner or a recovery request made by the issuer on the behalf of the owner (i.e the owner lost his wallet and wants to recover his token)
+      */
     }
 
     super._transferFrom(_from, _to, _tokenId);
     arianeeWhitelist.addWhitelistedAddress(_tokenId, _to);
+
+    if (_isFirstTransfer(_tokenId)) {
+      idToFirstTransfer[_tokenId] = false;
+      store.dispatchRewardsAtFirstTransfer(_tokenId, _to);
+    }
   }
+
+  function _isFirstTransfer(uint256 _tokenId) internal view returns (bool) {
+    return idToFirstTransfer[_tokenId] == true;
+  }
+
 }
 

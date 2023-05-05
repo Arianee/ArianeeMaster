@@ -10,11 +10,10 @@ const ArianeeMessage = artifacts.require("ArianeeMessage");
 const ArianeeUpdate = artifacts.require("ArianeeUpdate");
 const ArianeeUserAction = artifacts.require("ArianeeUserAction");
 
-const catchRevert = require("./helpers/exceptions.js").catchRevert;
-const bigNumber = require("big-number");
-const { GsnTestEnvironment } = require("@opengsn/dev");
+const { GsnTestEnvironment } = require('@opengsn/dev');
+const truffleAssert = require('truffle-assertions');
 
-contract("Cross Contracts", (accounts) => {
+contract("Soulbound (Cross Contracts)", (accounts) => {
   let arianeeSmartAssetInstance,
     ariaInstance,
     arianeeStoreInstance,
@@ -39,8 +38,8 @@ contract("Cross Contracts", (accounts) => {
 
     ariaInstance = await Aria.new();
     whiteListInstance = await Whitelist.new(forwarderAddress);
-    // This ArianeeSmartAsset contract is deployed WITHOUT the "Soublound" feature
-    arianeeSmartAssetInstance = await ArianeeSmartAsset.new(whiteListInstance.address, forwarderAddress, false);
+    // This ArianeeSmartAsset contract is deployed WITH the "Soublound" feature
+    arianeeSmartAssetInstance = await ArianeeSmartAsset.new(whiteListInstance.address, forwarderAddress, true);
     messageInstance = await ArianeeMessage.new(
       whiteListInstance.address,
       arianeeSmartAssetInstance.address,
@@ -100,28 +99,7 @@ contract("Cross Contracts", (accounts) => {
     messageInstance.setStoreAddress(arianeeStoreInstance.address);
   });
 
-  it("it should refuse to buy credit if you have not enough arias", async () => {
-    await ariaInstance.approve(arianeeStoreInstance.address, 0, { from: accounts[0] });
-    try {
-      await arianeeStoreInstance.buyCredit(0, 1, accounts[0], { from: accounts[0] });
-      assert.equal(true, false);
-    } catch (e) {
-      const credit = await creditHistoryInstance.balanceOf(accounts[0], 0);
-      assert.equal(credit, 0);
-    }
-  });
-
-  it("should send back the good balance", async () => {
-    await ariaInstance.approve(arianeeStoreInstance.address, "1000000000000000000", {
-      from: accounts[0],
-    });
-    await arianeeStoreInstance.buyCredit(0, 1, accounts[0]);
-    await arianeeStoreInstance.reserveToken(1, accounts[0], { from: accounts[0] });
-    const count = await arianeeSmartAssetInstance.balanceOf(accounts[0]);
-    assert.equal(count, 1);
-  });
-
-  it("should dispatch rewards correctly when buy a certificate", async () => {
+  it("should dispatch rewards correctly", async () => {
     await ariaInstance.transfer(accounts[1], "1000000000000000000", { from: accounts[0] });
     await ariaInstance.approve(arianeeStoreInstance.address, "1000000000000000000", {
       from: accounts[1],
@@ -138,7 +116,7 @@ contract("Cross Contracts", (accounts) => {
     let signedMessage = account.sign(encoded, account.address);
 
     await arianeeStoreInstance.hydrateToken(
-      1,
+      tokenId,
       web3.utils.keccak256("imprint"),
       "http://arianee.org",
       account.address,
@@ -149,7 +127,7 @@ contract("Cross Contracts", (accounts) => {
     );
 
     await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
-      1,
+      tokenId,
       signedMessage.messageHash,
       true,
       accounts[5],
@@ -158,7 +136,7 @@ contract("Cross Contracts", (accounts) => {
     );
 
     const nftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[6]);
-    const nftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[6]);
+    assert.equal(nftBalance, 1);
 
     let count = [];
     count[0] = await ariaInstance.balanceOf(accounts[0]);
@@ -169,8 +147,6 @@ contract("Cross Contracts", (accounts) => {
     count[5] = await ariaInstance.balanceOf(accounts[5]);
     count[6] = await ariaInstance.balanceOf(accounts[6]);
 
-
-    const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
     const storeBalance = await ariaInstance.balanceOf(arianeeStoreInstance.address);
 
     assert.equal(storeBalance, 0);
@@ -180,7 +156,115 @@ contract("Cross Contracts", (accounts) => {
     assert.equal(count[4], 200000000000000000);
     assert.equal(count[5], 200000000000000000);
     assert.equal(count[6], 100000000000000000);
+  });
 
-    assert.equal(nftBalance, 1);
+  it("should allow transfer if the token is owned by the issuer", async () => {
+    await ariaInstance.transfer(accounts[1], "1000000000000000000", { from: accounts[0] });
+    await ariaInstance.approve(arianeeStoreInstance.address, "1000000000000000000", {
+      from: accounts[1],
+    });
+    await arianeeStoreInstance.buyCredit(0, 1, accounts[1], { from: accounts[1] });
+
+    let tokenId = 2;
+    await arianeeStoreInstance.reserveToken(tokenId, accounts[1], { from: accounts[1] });
+
+    let account = web3.eth.accounts.create();
+    let address = accounts[6];
+    let encoded = web3.utils.keccak256(
+      web3.eth.abi.encodeParameters(["uint", "address"], [tokenId, address])
+    );
+    let signedMessage = account.sign(encoded, account.address);
+
+    await arianeeStoreInstance.hydrateToken(
+      tokenId,
+      web3.utils.keccak256("imprint"),
+      "http://arianee.org",
+      account.address,
+      Math.floor(Date.now() / 1000) + 2678400,
+      true,
+      accounts[4],
+      { from: accounts[1] }
+    );
+
+    await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
+      tokenId,
+      signedMessage.messageHash,
+      true,
+      accounts[5],
+      signedMessage.signature,
+      { from: accounts[6] }
+    );
+
+    const issuerNftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[1]);
+    assert.equal(issuerNftBalance, 0);
+
+    const tokenOwner = await arianeeSmartAssetInstance.ownerOf(tokenId);
+    assert.equal(tokenOwner, accounts[6]);
+  });
+
+  it("should NOT allow transfer if the token is NOT owned by the issuer", async () => {
+    await ariaInstance.transfer(accounts[1], "1000000000000000000", { from: accounts[0] });
+    await ariaInstance.approve(arianeeStoreInstance.address, "1000000000000000000", {
+      from: accounts[1],
+    });
+    await arianeeStoreInstance.buyCredit(0, 1, accounts[1], { from: accounts[1] });
+
+    let tokenId = 3;
+    await arianeeStoreInstance.reserveToken(tokenId, accounts[1], { from: accounts[1] });
+
+    let account = web3.eth.accounts.create();
+    let address = accounts[6];
+    let encoded = web3.utils.keccak256(
+      web3.eth.abi.encodeParameters(["uint", "address"], [tokenId, address])
+    );
+    let signedMessage = account.sign(encoded, account.address);
+
+    await arianeeStoreInstance.hydrateToken(
+      tokenId,
+      web3.utils.keccak256("imprint"),
+      "http://arianee.org",
+      account.address,
+      Math.floor(Date.now() / 1000) + 2678400,
+      true,
+      accounts[4],
+      { from: accounts[1] }
+    );
+
+    await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
+      tokenId,
+      signedMessage.messageHash,
+      true,
+      accounts[5],
+      signedMessage.signature,
+      { from: accounts[6] }
+    );
+
+    const issuerNftBalance = await arianeeSmartAssetInstance.balanceOf(accounts[1]);
+    assert.equal(issuerNftBalance, 0);
+
+    const tokenOwner1 = await arianeeSmartAssetInstance.ownerOf(tokenId);
+    assert.equal(tokenOwner1, accounts[6]);
+
+    let address2 = accounts[7];
+    let encoded2 = web3.utils.keccak256(
+      web3.eth.abi.encodeParameters(["uint", "address"], [tokenId, address2])
+    );
+    let signedMessage2 = account.sign(encoded2, account.address);
+
+    await truffleAssert.fails(
+      arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
+        tokenId,
+        signedMessage2.messageHash,
+        true,
+        accounts[5],
+        signedMessage2.signature,
+        { from: accounts[7] }
+      ),
+      truffleAssert.ErrorType.REVERT,
+      "ArianeeSmartAsset: Only the issuer can transfer a soulbound token"
+    );
+
+    const tokenOwner = await arianeeSmartAssetInstance.ownerOf(tokenId);
+    assert.equal(tokenOwner, accounts[6]);
   });
 });
