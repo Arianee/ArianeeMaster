@@ -149,7 +149,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     setWhitelistAddress(_arianeeWhitelistAddress);
 
     // 28.04.2023: Keeping the same behaviour with the new _setUri function, passing an empty string as postfix parameter
-    // _setUriBase(_newURIBase);
+    // _setUriBase("https://cert.arianee.org/");
     _setUri("https://cert.arianee.org/", "");
 
     _setTrustedForwarder(_forwarder);
@@ -287,8 +287,9 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
 
     idToApproval[_tokenId] = _msgSender();
 
-    if (!_keepRequestToken) {
+    if (_keepRequestToken) {
       require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request key for a soulbound token");
+    } else {
       tokenAccess[_tokenId][1] = address(0);
     }
 
