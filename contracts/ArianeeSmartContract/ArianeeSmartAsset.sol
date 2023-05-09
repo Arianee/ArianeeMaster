@@ -251,7 +251,15 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _tokenType Type of token access (0=view, 1=tranfer).
    */
   function addTokenAccess(uint256 _tokenId, address _key, bool _enable, uint256 _tokenType) external isOperator(_tokenId, _msgSender()) whenNotPaused() {
-      require(_tokenType>0);
+    require(_tokenType > 0, "ArianeeSmartAsset: The tokenType parameter must be > 0");
+
+    bool isTransferTokenAccess = (_tokenType == 1);
+    if (isTransferTokenAccess && isSoulbound) {
+      address tokenOwner = idToOwner[_tokenId];
+      address tokenIssuer = certificate[_tokenId].tokenIssuer;
+      require(tokenOwner == tokenIssuer, "ArianeeSmartAsset: Only the issuer can add a transfer token access to a soulbound token");
+    }
+
     if (_enable) {
       tokenAccess[_tokenId][_tokenType] = _key;
     }
@@ -280,6 +288,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     idToApproval[_tokenId] = _msgSender();
 
     if (!_keepRequestToken) {
+      require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request key for a soulbound token");
       tokenAccess[_tokenId][1] = address(0);
     }
 

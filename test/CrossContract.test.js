@@ -26,9 +26,14 @@ contract("Cross Contracts", (accounts) => {
     arianeeUpdate,
     arianeeUserAction;
 
-  beforeEach(async () => {
-    const { forwarderAddress } = await GsnTestEnvironment.loadDeployment();
+  let forwarderAddress;
 
+  before(async () => {
+    forwarderAddress = (await GsnTestEnvironment.loadDeployment()).forwarderAddress;
+    console.log('[Cross Contracts] Forwarder address: ', forwarderAddress);
+  });
+
+  beforeEach(async () => {
     const authorizedExchangeAddress = accounts[0];
     const projectAddress = accounts[2];
     const infraAddress = accounts[3];
@@ -75,29 +80,29 @@ contract("Cross Contracts", (accounts) => {
       forwarderAddress
     );
 
-    const identityInstance = ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
+    const identityInstance = await ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
 
-    arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
-    arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
-    arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
-    arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
+    await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
+    await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
+    await arianeeStoreInstance.setAuthorizedExchangeAddress(authorizedExchangeAddress);
+    await arianeeStoreInstance.setDispatchPercent(10, 20, 20, 40, 10);
 
-    arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
-    creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
-    arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
-    arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
+    await arianeeSmartAssetInstance.setStoreAddress(arianeeStoreInstance.address);
+    await creditHistoryInstance.setArianeeStoreAddress(arianeeStoreInstance.address);
+    await arianeeEventInstance.setStoreAddress(arianeeStoreInstance.address);
+    await arianeeUpdate.updateStoreAddress(arianeeStoreInstance.address);
 
-    arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
-    whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
-    whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
-    whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
+    await arianeeSmartAssetInstance.grantAbilities(arianeeStoreInstance.address, [2]);
+    await whiteListInstance.grantAbilities(arianeeSmartAssetInstance.address, [2]);
+    await whiteListInstance.grantAbilities(arianeeEventInstance.address, [2]);
+    await whiteListInstance.grantAbilities(arianeeUserAction.address, [2]);
 
-    arianeeEventInstance.transferOwnership(ownerAddress);
-    arianeeStoreInstance.transferOwnership(ownerAddress);
-    arianeeSmartAssetInstance.transferOwnership(ownerAddress);
-    creditHistoryInstance.transferOwnership(ownerAddress);
+    await arianeeEventInstance.transferOwnership(ownerAddress);
+    await arianeeStoreInstance.transferOwnership(ownerAddress);
+    await arianeeSmartAssetInstance.transferOwnership(ownerAddress);
+    await creditHistoryInstance.transferOwnership(ownerAddress);
 
-    messageInstance.setStoreAddress(arianeeStoreInstance.address);
+    await messageInstance.setStoreAddress(arianeeStoreInstance.address);
   });
 
   it("it should refuse to buy credit if you have not enough arias", async () => {

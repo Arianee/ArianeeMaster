@@ -12,10 +12,18 @@ const ArianeeMessage = artifacts.require('ArianeeMessage');
 const ArianeeUpdate = artifacts.require('ArianeeUpdate');
 const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
 const SMART_ASSET_IS_SOULBOUND = false;
+const FORWARDER_ADDR = null; // If set to null, the forwarder address will be taken from the GSN test environment
 
 async function deployProtocol(deployer, network, accounts) {
-  const { forwarderAddress } = await GsnTestEnvironment.loadDeployment();
+  let forwarderAddress = FORWARDER_ADDR;
+  if (forwarderAddress === null || forwarderAddress === undefined || forwarderAddress === ZERO_ADDR) {
+    const { forwarderAddress: testForwarderAddress } = await GsnTestEnvironment.loadDeployment();
+    forwarderAddress = testForwarderAddress;
+  }
+  console.log('[DeployProtocol] Forwarder address: ', forwarderAddress);
 
   const authorizedExchangeAddress = accounts[0];
   const projectAddress = accounts[0];

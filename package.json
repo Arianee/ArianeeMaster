@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "ganache:launch": "ganache-cli --deterministic -e 100 --port 8545 --gasLimit 8000000 --chain.chainId 5777",
+    "ganache:start": "ganache-cli --deterministic -e 100 --port 8545 --gasLimit 8000000 --chain.chainId 5777",
     "ganache:deploy": " truffle deploy --network test",
     "gsn:start": "npx gsn start",
     "symlink": "node createSymlink.js",
