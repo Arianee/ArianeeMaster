@@ -456,12 +456,13 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     /**
      * @dev Allow or not a transfer in the SmartAsset contract.
      * @dev not used for now.
-     * @param _to Receiver of the NFT.
      * @param _from Actual owner of the NFT.
+     * @param _to Receiver of the NFT.
      * @param _tokenId id of the token.
+     * @param _isSoulbound Flag to know if the token is a soulbound one.
      * @return true.
      */
-    function canTransfer(address _to, address _from, uint256 _tokenId) external pure returns(bool){
+    function canTransfer(address _from, address _to, uint256 _tokenId, bool _isSoulbound) external pure returns(bool){
         return true;
     }
 
@@ -470,9 +471,10 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @dev not used for now.
      * @param _tokenId id of the token.
      * @param _sender address asking the destroy.
+     * @param _isSoulbound Flag to know if the token is a soulbound one.
      * @return false.
      */
-    function canDestroy(uint256 _tokenId, address _sender) external pure returns(bool){
+    function canDestroy(uint256 _tokenId, address _sender, bool _isSoulbound) external pure returns(bool){
         return false;
     }
 

@@ -17,3 +17,10 @@ git submodule update --init --recursive
 npm run symlink
 truffle test 
 ```
+
+### Test
+```
+npm run ganache:start
+npm run gsn:start
+npm run test
+```

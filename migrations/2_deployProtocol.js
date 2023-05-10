@@ -1,3 +1,5 @@
+const { GsnTestEnvironment } = require('@opengsn/dev');
+
 const ArianeeSmartAsset = artifacts.require('ArianeeSmartAsset');
 const ArianeeStore = artifacts.require('ArianeeStore');
 const Aria = artifacts.require('Aria');
@@ -10,8 +12,19 @@ const ArianeeMessage = artifacts.require('ArianeeMessage');
 const ArianeeUpdate = artifacts.require('ArianeeUpdate');
 const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
+const SMART_ASSET_IS_SOULBOUND = false;
+const FORWARDER_ADDR = null; // If set to null, the forwarder address will be taken from the GSN test environment
 
 async function deployProtocol(deployer, network, accounts) {
+  let forwarderAddress = FORWARDER_ADDR;
+  if (forwarderAddress === null || forwarderAddress === undefined || forwarderAddress === ZERO_ADDR) {
+    console.log('[DeployProtocol] Using GSN test environment');
+    const { forwarderAddress: testForwarderAddress } = await GsnTestEnvironment.loadDeployment();
+    forwarderAddress = testForwarderAddress;
+  }
+  console.log('[DeployProtocol] Forwarder address: ', forwarderAddress);
 
   const authorizedExchangeAddress = accounts[0];
   const projectAddress = accounts[0];
@@ -20,22 +33,19 @@ async function deployProtocol(deployer, network, accounts) {
   const validatorAddress = accounts[0];
   const ownerAddress = accounts[0];
   const lostManager = accounts[0];
-  const forwarder = '0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B';
-
 
   // need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(Aria);
 
   const ariaInstance = await deployer.deploy(Aria);
-  const whiteListInstance = await deployer.deploy(Whitelist, forwarder);
-  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, forwarder);
-  const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
-  const creditHistoryInstance = await deployer.deploy(CreditHistory, forwarder);
-  const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address, forwarder);
-  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address, lostManager, forwarder);
-  const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address, forwarder);
-  const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarder);
-
+  const whiteListInstance = await deployer.deploy(Whitelist, forwarderAddress);
+  const arianeeSmartAssetInstance = await deployer.deploy(ArianeeSmartAsset, whiteListInstance.address, forwarderAddress, SMART_ASSET_IS_SOULBOUND);
+  const messageInstance = await deployer.deploy(ArianeeMessage, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarderAddress);
+  const creditHistoryInstance = await deployer.deploy(CreditHistory, forwarderAddress);
+  const arianeeEventInstance = await deployer.deploy(ArianeeEvent, arianeeSmartAssetInstance.address, whiteListInstance.address, forwarderAddress);
+  const arianeeLost = await deployer.deploy(ArianeeLost, arianeeSmartAssetInstance.address, lostManager, forwarderAddress);
+  const arianeeUpdate = await deployer.deploy(ArianeeUpdate, arianeeSmartAssetInstance.address, forwarderAddress);
+  const arianeeUserAction = await deployer.deploy(ArianeeUserAction, whiteListInstance.address, arianeeSmartAssetInstance.address, forwarderAddress);
 
   const arianeeStoreInstance = await deployer.deploy(
     ArianeeStore,
@@ -50,10 +60,10 @@ async function deployProtocol(deployer, network, accounts) {
     '10',
     '10',
     '10',
-    forwarder
+    forwarderAddress
   );
 
-  const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress, forwarder);
+  const identityInstance = await deployer.deploy(ArianeeIdentity,bouncerAddress, validatorAddress, forwarderAddress);
 
   await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
   await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);
@@ -94,7 +104,7 @@ async function deployProtocol(deployer, network, accounts) {
       "updateSmartAssets": arianeeUpdate.address
     },
     'httpProvider': 'http://localhost:8545',
-    'chainId': 42
+    'chainId': 5777
   };
 
   console.log('###########################');
