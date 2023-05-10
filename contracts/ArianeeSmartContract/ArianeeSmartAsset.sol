@@ -257,7 +257,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
     if (isTransferTokenAccess && isSoulbound) {
       address tokenOwner = idToOwner[_tokenId];
       address tokenIssuer = certificate[_tokenId].tokenIssuer;
-      require(tokenOwner == tokenIssuer, "ArianeeSmartAsset: Only the issuer can add a transfer token access to a soulbound token");
+      require(tokenOwner == tokenIssuer, "ArianeeSmartAsset: Only the issuer can add a transfer token access to a soulbound smart asset");
     }
 
     if (_enable) {
@@ -281,14 +281,14 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    * @param _newOwner Address of the new owner of the NFT.
    */
   function requestToken(uint256 _tokenId, bytes32 _hash, bool _keepRequestToken, address _newOwner, bytes calldata _signature) external hasAbilities(ABILITY_CREATE_ASSET) whenNotPaused() {
-    require(isTokenValid(_tokenId, _hash, 1, _signature));
+    require(isTokenValid(_tokenId, _hash, 1, _signature), "ArianeeSmartAsset: Invalid request token");
     bytes32 message = keccak256(abi.encode(_tokenId, _newOwner));
     require(ECDSA.toEthSignedMessageHash(message) == _hash);
 
     idToApproval[_tokenId] = _msgSender();
 
     if (_keepRequestToken) {
-      require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request key for a soulbound token");
+      require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request token for a soulbound smart asset");
     } else {
       tokenAccess[_tokenId][1] = address(0);
     }
@@ -502,7 +502,7 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
 
       // If the owner is NOT the issuer, the token is soulbound and the transfer can be made only by the issuer to change the owner if needed
       if (tokenOwner != tokenIssuer) {
-        require(tokenIssuer == _msgSender(), "ArianeeSmartAsset: Only the issuer can transfer a soulbound token");
+        require(tokenIssuer == _msgSender(), "ArianeeSmartAsset: Only the issuer can transfer a soulbound smart asset");
       }
 
       /*

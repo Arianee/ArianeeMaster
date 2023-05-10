@@ -132,7 +132,7 @@ contract("Soulbound", (accounts) => {
     await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
       tokenId,
       signedMessage.messageHash,
-      true,
+      false,
       accounts[5],
       signedMessage.signature,
       { from: accounts[6] }
@@ -192,7 +192,7 @@ contract("Soulbound", (accounts) => {
     await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
       tokenId,
       signedMessage.messageHash,
-      true,
+      false,
       accounts[5],
       signedMessage.signature,
       { from: accounts[6] }
@@ -236,7 +236,7 @@ contract("Soulbound", (accounts) => {
     await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
       tokenId,
       signedMessage.messageHash,
-      true,
+      false,
       accounts[5],
       signedMessage.signature,
       { from: accounts[6] }
@@ -255,16 +255,22 @@ contract("Soulbound", (accounts) => {
     let signedMessage2 = account.sign(encoded2, account.address);
 
     await truffleAssert.fails(
+      arianeeSmartAssetInstance.addTokenAccess(tokenId, account.address, true, 1, { from: accounts[6] }),
+      truffleAssert.ErrorType.REVERT,
+      "ArianeeSmartAsset: Only the issuer can add a transfer token access to a soulbound smart asset"
+    );
+
+    await truffleAssert.fails(
       arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
         tokenId,
         signedMessage2.messageHash,
-        true,
+        false,
         accounts[5],
         signedMessage2.signature,
         { from: accounts[7] }
       ),
       truffleAssert.ErrorType.REVERT,
-      "ArianeeSmartAsset: Only the issuer can transfer a soulbound token"
+      "ArianeeSmartAsset: Invalid request token"
     );
 
     const tokenOwner = await arianeeSmartAssetInstance.ownerOf(tokenId);

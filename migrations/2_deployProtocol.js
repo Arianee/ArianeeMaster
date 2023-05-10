@@ -20,6 +20,7 @@ const FORWARDER_ADDR = null; // If set to null, the forwarder address will be ta
 async function deployProtocol(deployer, network, accounts) {
   let forwarderAddress = FORWARDER_ADDR;
   if (forwarderAddress === null || forwarderAddress === undefined || forwarderAddress === ZERO_ADDR) {
+    console.log('[DeployProtocol] Using GSN test environment');
     const { forwarderAddress: testForwarderAddress } = await GsnTestEnvironment.loadDeployment();
     forwarderAddress = testForwarderAddress;
   }
