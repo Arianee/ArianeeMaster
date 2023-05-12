@@ -33,7 +33,7 @@ contract ArianeeCreditHistory is Ownable, ERC2771Recipient {
   constructor(address _forwarder){
       _setTrustedForwarder(_forwarder);
   }
-  
+
   function updateForwarderAddress(address _forwarder) external onlyOwner {
     _setTrustedForwarder(_forwarder);
   }
@@ -94,17 +94,16 @@ contract ArianeeCreditHistory is Ownable, ERC2771Recipient {
       require(totalCredits[_spender][_type]>0, "No credit of that type");
       uint256 _index = historyIndex[_spender][_type];
       require(creditHistory[_spender][_type][_index].quantity >= _quantity);
-      unchecked{
-        uint256 price = creditHistory[_spender][_type][_index].price;
-        creditHistory[_spender][_type][_index].quantity = creditHistory[_spender][_type][_index].quantity - _quantity;
-        totalCredits[_spender][_type] = totalCredits[_spender][_type] - 1;
 
-        if(creditHistory[_spender][_type][_index].quantity == 0){
-            historyIndex[_spender][_type] = historyIndex[_spender][_type] - 1;
-        }
+      uint256 price = creditHistory[_spender][_type][_index].price;
+      creditHistory[_spender][_type][_index].quantity = creditHistory[_spender][_type][_index].quantity - _quantity;
+      totalCredits[_spender][_type] = totalCredits[_spender][_type] - 1;
 
-        return price;
+      if(creditHistory[_spender][_type][_index].quantity == 0){
+          historyIndex[_spender][_type] = historyIndex[_spender][_type] + 1;
       }
+
+      return price;
   }
 
   /**
