@@ -37,6 +37,13 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         _;
     }
 
+    modifier onlyAllowedBuyer(address _buyer){
+        if(dedicatedContract){
+            require(allowedBuyer[_buyer], "You are not allowed to buy credit on this contract");
+        }
+        _;
+    }
+
     /**
      * @dev Mapping of the credit price in $cent.
      */
@@ -63,6 +70,16 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     address public authorizedExchangeAddress;
     address public protocolInfraAddress;
     address public arianeeProjectAddress;
+
+    /**
+     * Is the contract dedicated or shared.
+     */
+    bool dedicatedContract = false;
+
+    /**
+     * Mapping of allowed buyer if contract is private.
+     */
+    mapping (address=>bool) public allowedBuyer;
 
     /**
      * @dev Mapping from token id to the address of the NMP provider.
@@ -201,7 +218,8 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @param _quantity uint256 quantity to buy
      * @param _to receiver of the credits
      */
-    function buyCredit(uint256 _creditType, uint256 _quantity, address _to) external whenNotPaused() {
+    function buyCredit(uint256 _creditType, uint256 _quantity, address _to) external onlyAllowedBuyer(_to) whenNotPaused() {
+        
         uint256 tokens = _quantity * creditPrices[_creditType];
 
         // Transfer required token quantity to buy quantity credit
@@ -483,7 +501,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @param _id uint256 id of the NFT
      * @param _to address receiver of the token.
      */
-    function reserveToken(uint256 _id, address _to) public whenNotPaused() {
+    function reserveToken(uint256 _id, address _to) public onlyAllowedBuyer(_to) whenNotPaused() {
         nonFungibleRegistry.reserveToken(_id, _to);
     }
 
@@ -556,5 +574,15 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         acceptedToken.transfer(_walletProvider, (_reward / 100) * dispatchPercent[2]);
         acceptedToken.transfer(arianeeProjectAddress, (_reward / 100) * dispatchPercent[3]);
         acceptedToken.transfer(_newOwner, (_reward / 100) * dispatchPercent[4]);
+    }
+
+    function addNewBuyer(address _newBuyerAddress) external onlyOwner{
+        require(dedicatedContract, "This contract is shared");
+        allowedBuyer[_newBuyerAddress] = true;
+    }
+
+    function removeNewBuyer(address _newBuyerAddress) external onlyOwner{
+        require(dedicatedContract, "This contract is shared");
+        allowedBuyer[_newBuyerAddress] = false;
     }
 }
