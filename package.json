@@ -22,7 +22,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@arianee/arianeejs": "^0.31.0",
+    "@arianee/arianeejs": "^1.117.0",
     "async": "^2.6.4",
     "axios": "^1.6.0",
     "eslint": "^5.16.0",
