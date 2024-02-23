@@ -1,254 +1,301 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.5.6;
 
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 
-contract iSmartAsset{
-    function ownerOf(uint256 _tokenId) external returns (address _owner);
+
+
+abstract contract ERC721Interface {
+  function canOperate(uint256 _tokenId, address _operator) public virtual returns (bool);
+  function isTokenValid(uint256 _tokenId, bytes32 _hash, uint256 _tokenType, bytes memory _signature) public virtual view returns (bool);
+  function issuerOf(uint256 _tokenId) external virtual view returns (address _tokenIssuer);
+  function tokenCreation(uint256 _tokenId) external virtual view returns (uint256);
 }
+contract ArianeeLost is Ownable {
 
-contract ArianeeLost is Ownable{
-
-   /**
-    * @dev Mapping from token id to missing status.
+  /**
+   * @dev Mapping from token id to missing status.
     */
-    mapping(uint256 => bool) tokenMissingStatus;
+  mapping(uint256 => bool) tokenMissingStatus;
 
-    /**
-     * @dev Mapping from token id to stolen status.
+  /**
+   * @dev Mapping from token id to stolen status.
      */
-    mapping(uint256 => bool) tokenStolenStatus;
+  mapping(uint256 => bool) tokenStolenStatus;
 
-    /**
-     * @dev Mapping of authorizedIdentities
+  /**
+   * @dev Mapping of authorizedIdentities
      */
-    mapping(address => bool) authorizedIdentities;
+  mapping(address => bool) authorizedIdentities;
 
-    /**
-     * @dev Mapping from tokenId to stolen status issuer.
+  /**
+    * @dev Mapping from token id to address that set stolen status.
+    */
+  mapping(uint256 => address) tokenStolenIssuer;
+
+  /**
+   * @dev address of the manager.
      */
-    mapping(uint256 => address) tokenStolenIssuer;
+  address managerIdentity;
 
-    /**
-     * @dev address of the manager.
+  /**
+   * @dev Interface to connected contract.
      */
-    address managerIdentity;
+  ERC721Interface public smartAsset;
 
-    /**
-     * @dev Interface to connected contract.
+  /**
+   * @dev This emits when a new manager is set by the contract owner.
      */
-    iSmartAsset public smartAsset;
+  event NewManagerIdentity(address indexed _newManagerIdentity);
 
-    /**
-     * @dev This emits when a new manager is set by the contract owner.
+  /**
+   * @dev This emits when a passport is declared missing by its owner.
      */
-    event NewManagerIdentity(address indexed _newManagerIdentity);
+  event Missing(uint256 indexed _tokenId);
 
-    /**
-     * @dev This emits when a passport is declared missing by its owner.
+  /**
+   * @dev This emits when a passport is declared no missing anymore by its owner.
      */
-    event Missing(uint256 indexed _tokenId);
+  event UnMissing(uint256 indexed _tokenId);
 
-    /**
-     * @dev This emits when a passport is declared no missing anymore by its owner.
+  /**
+   * @dev This emits when the manager declare a new authorized identity.
      */
-    event UnMissing(uint256 indexed _tokenId);
+  event AuthorizedIdentityAdded(address indexed _newIdentityAuthorized);
 
-    /**
-     * @dev This emits when the manager declare a new authorized identity.
+  /**
+   * @dev This emits when the manager declare an identity not authorized anymore.
      */
-    event AuthorizedIdentityAdded(address indexed _newIdentityAuthorized);
+  event AuthorizedIdentityRemoved(address indexed _newIdentityUnauthorized);
 
-    /**
-     * @dev This emits when the manager declare an identity not authorized anymore.
+  /**
+   * @dev This emits when an authorized identity declare a passport as stolen.
      */
-    event AuthorizedIdentityRemoved(address indexed _newIdentityUnauthorized);
+  event Stolen(uint256 indexed _tokenId);
 
-    /**
-     * @dev This emits when an authorized identity declare a passport as stolen.
+  /**
+   * @dev This emits when an authorized identity declare a passport not stolen anymore.
      */
-    event Stolen(uint256 indexed _tokenId);
+  event UnStolen(uint256 indexed _tokenId);
 
-    /**
-     * @dev This emits when an authorized identity declare a passport not stolen anymore.
-     */
-    event UnStolen(uint256 indexed _tokenId);
-
-
-     /**
-      * @param _smartAssetAddress address of SmartAssetContract
+  /**
+   * @param _smartAssetAddress address of SmartAssetContract
       */
-    constructor(address _smartAssetAddress, address _managerIdentity) public {
-        smartAsset = iSmartAsset(_smartAssetAddress);
-        setManagerIdentity(_managerIdentity);
-    }
+  constructor(address _smartAssetAddress, address _managerIdentity) {
+    smartAsset = ERC721Interface(_smartAssetAddress);
+    setManagerIdentity(_managerIdentity);
+  }
 
-    /**
-     * @dev Only owner can modifier
-     * @param _tokenId tokenId of certificate.
-     */
-    modifier onlyTokenOwner(uint256 _tokenId){
-      require(
-        smartAsset.ownerOf(_tokenId) == msg.sender,
-        "Not authorized because not the owner"
-        );
-        _;
-    }
+  modifier onlyTokenOwnerOrIssuerOrAuthorizedIdentity(uint256 _tokenId){
+    require(smartAsset.canOperate(_tokenId, msg.sender)
+    || smartAsset.issuerOf(_tokenId) == msg.sender
+    || authorizedIdentities[msg.sender],
+      "ArianeeLost: only token owner, issuer or authorized identity can operate"
+    );
+    _;
+  }
 
-     /**
-      * @dev tokenId's underlying has to be missing
+  /**
+   * @dev tokenId's underlying has to be missing
       * @param _tokenId tokenId of certificate.
       */
-    modifier onlyHasBeenMissing(uint256 _tokenId){
-      require(
-        tokenMissingStatus[_tokenId] == true,
-        "tokenId's underlying is not missing"
-        );
-        _;
-    }
+  modifier onlyHasBeenMissing(uint256 _tokenId){
+    require(
+      tokenMissingStatus[_tokenId] == true,
+      "ArianeeLost: token status must be missing "
+    );
+    _;
+  }
 
-    /**
-     * @dev tokenId's underlying has not to be missing
+  /**
+   * @dev tokenId's underlying has not to be missing
      * @param _tokenId tokenId of certificate.
      */
-    modifier onlyHasNotBeenMissing(uint256 _tokenId){
-      require(
-        tokenMissingStatus[_tokenId] == false,
-        "tokenId's underlying is not missing"
-        );
-        _;
-    }
+  modifier onlyHasNotBeenMissing(uint256 _tokenId){
+    require(
+      tokenMissingStatus[_tokenId] == false,
+      "ArianeeLost: token status must be not missing "
+    );
+    _;
+  }
 
-    modifier onlyManager(){
-        require(
-            msg.sender == managerIdentity,
-            "You need to be the manager"
-            );
-            _;
-    }
-
-    modifier onlyAuthorizedIdentity(){
-        require(
-            authorizedIdentities[msg.sender],
-            "You need to be the authorized"
-            );
-            _;
-    }
-
-    modifier onlyAuthorizedIdentityOrManager(){
-        require(
-            authorizedIdentities[msg.sender] || msg.sender == managerIdentity,
-            "You need to be the auhtorized"
-            );
-            _;
-    }
-
-    /**
-     * @dev Public function to set tokenId's underlying status as missing
+  /**
+ * @dev tokenId's underlying has not to be missing
      * @param _tokenId tokenId of certificate.
      */
-    function setMissingStatus(uint256 _tokenId) external onlyTokenOwner(_tokenId) onlyHasNotBeenMissing(_tokenId){
-        tokenMissingStatus[_tokenId]=true;
-        emit Missing(_tokenId);
-    }
+  modifier onlyIsNotStolen(uint256 _tokenId){
+    require(
+      tokenStolenStatus[_tokenId] != true,
+      "ArianeeLost: token status must be not stolen"
+    );
+    _;
+  }
 
-    /**
+  /**
+ * @dev tokenId's underlying has not to be missing
+     * @param _tokenId tokenId of certificate.
+     */
+  modifier onlyIsStolen(uint256 _tokenId){
+    require(
+      tokenStolenStatus[_tokenId] == true,
+      "ArianeeLost: token status must be stolen"
+    );
+    _;
+  }
+
+  modifier onlyManager(){
+    require(
+      msg.sender == managerIdentity,
+      "ArianeeLost: only manager can operate"
+    );
+    _;
+  }
+
+  modifier onlyAuthorizedIdentityOrIssuer(uint256 _tokenId){
+    require(
+      smartAsset.issuerOf(_tokenId) == msg.sender || authorizedIdentities[ msg.sender],
+      "ArianeeLost: only authorized identity or issuer can operate"
+    );
+    _;
+  }
+
+  modifier onlyAuthorizedIdentityToUnsetStolenStatusOrIssuer(uint256 _tokenId){
+    require(smartAsset.issuerOf(_tokenId) == msg.sender
+    || authorizedIdentities[msg.sender],
+
+      "ArianeeLost: only token owner, issuer or authorized identity can operate"
+    );
+    _;
+  }
+
+  /**
+ * @dev Public function to set tokenId's underlying status as missing
+     * @dev Can only be called by the owner of the token or issuer or authorized address
+     * @param _tokenId tokenId of certificate.
+     */
+  function _setMissingStatus(uint256 _tokenId) internal onlyHasNotBeenMissing(_tokenId) {
+    tokenMissingStatus[_tokenId] = true;
+    emit Missing(_tokenId);
+  }
+
+  /**
+   * @dev Public function to set tokenId's underlying status as missing
+     * @dev Can only be called by the owner of the token or issuer or authorized address
+     * @param _tokenId tokenId of certificate.
+     */
+  function setMissingStatus(uint256 _tokenId) external onlyTokenOwnerOrIssuerOrAuthorizedIdentity(_tokenId) {
+    _setMissingStatus(_tokenId);
+  }
+
+  /**
      * @dev Public function to unset tokenId's underlying status as missing. underlying has been retrieved.
+     * can only be unset if the token is not stolen and has been missing
      * @param _tokenId tokenId of certificate.
      */
-    function unsetMissingStatus(uint256 _tokenId) external onlyTokenOwner(_tokenId) onlyHasBeenMissing(_tokenId){
-        tokenMissingStatus[_tokenId]=false;
-        emit UnMissing(_tokenId);
-    }
+  function _unsetMissingStatus(uint256 _tokenId) internal onlyIsNotStolen(_tokenId) onlyHasBeenMissing(_tokenId) {
+    tokenMissingStatus[_tokenId] = false;
+    emit UnMissing(_tokenId);
+  }
 
-    /**
-     * @dev Public function to get missing status of token.
+  /**
+* @dev Public function to unset tokenId's underlying status as missing. underlying has been retrieved.
+             * @dev Can only be called by the owner of the token or issuer or authorized address
+             * @param _tokenId tokenId of certificate.
+             */
+  function unsetMissingStatus(uint256 _tokenId) external onlyTokenOwnerOrIssuerOrAuthorizedIdentity(_tokenId) {
+    _unsetMissingStatus(_tokenId);
+  }
+
+  /**
+   * @dev Public function to get missing status of token.
      * @param _tokenId tokenId of certificate.
      * @return _isMissing bool
      */
-    function isMissing(uint256 _tokenId) public view returns (bool _isMissing) {
-        _isMissing = tokenMissingStatus[_tokenId];
-    }
+  function isMissing(uint256 _tokenId) public view returns (bool _isMissing) {
+    _isMissing = tokenMissingStatus[_tokenId];
+  }
 
-    /**
-     * @dev Set the manager identity.
+  /**
+   * @dev Set the manager identity.
      * @dev Can only be called by the contract owner.
      * @param _managerIdentity the address of the new manager.
      */
-    function setManagerIdentity(address _managerIdentity) public onlyOwner(){
-        managerIdentity = _managerIdentity;
-        emit NewManagerIdentity(_managerIdentity);
-    }
+  function setManagerIdentity(address _managerIdentity) public onlyOwner() {
+    managerIdentity = _managerIdentity;
+    emit NewManagerIdentity(_managerIdentity);
+  }
 
-    /**
-     * @dev Set a new identity authorized to set and unset stolen status.
+  /**
+   * @dev Set a new identity authorized to set and unset stolen status.
      * @dev Can only be called by the manager.
      * @param _newIdentityAuthorized address of the new authorized identity.
      */
-    function setAuthorizedIdentity(address _newIdentityAuthorized) external onlyManager(){
-        authorizedIdentities[_newIdentityAuthorized] = true;
-        emit AuthorizedIdentityAdded(_newIdentityAuthorized);
-    }
+  function addAuthorizedIdentity(address _newIdentityAuthorized) external onlyManager() {
+    authorizedIdentities[_newIdentityAuthorized] = true;
+    emit AuthorizedIdentityAdded(_newIdentityAuthorized);
+  }
 
-    /**
-     * @dev Remove a new identity authorized to set and unset stolen status.
+  /**
+   * @dev Remove a new identity authorized to set and unset stolen status.
      * @dev Can only be called by the manager.
      * @param _newIdentityUnauthorized address authorized identity to remove.
      */
-    function unsetAuthorizedIdentity(address _newIdentityUnauthorized) external onlyManager(){
-        authorizedIdentities[_newIdentityUnauthorized] = false;
-        emit AuthorizedIdentityRemoved(_newIdentityUnauthorized);
-    }
+  function removeAuthorizedIdentity(address _newIdentityUnauthorized) external onlyManager() {
+    authorizedIdentities[_newIdentityUnauthorized] = false;
+    emit AuthorizedIdentityRemoved(_newIdentityUnauthorized);
+  }
 
-    /**
-     * @dev Set a token has stolen.
+  /**
+   * @dev Set a token has stolen.
      * @dev Can only be called by an authorized identity.
      * @dev The item need to be missing.
      * @param _tokenId token id to be set as stolen.
      */
-    function setStolenStatus(uint256 _tokenId) external onlyAuthorizedIdentity(){
-        require(tokenMissingStatus[_tokenId] == true);
-        require(tokenStolenStatus[_tokenId] == false);
-        tokenStolenStatus[_tokenId] = true;
-        tokenStolenIssuer[_tokenId] = msg.sender;
-        emit Stolen(_tokenId);
+  function setStolenStatus(uint256 _tokenId) external onlyIsNotStolen(_tokenId) onlyAuthorizedIdentityOrIssuer(_tokenId) {
+    if (tokenMissingStatus[_tokenId] == false) {
+      _setMissingStatus(_tokenId);
     }
 
-    /**
-     * @dev Remove the stolen status
+    tokenStolenStatus[_tokenId] = true;
+    tokenStolenIssuer[_tokenId] = msg.sender;
+    emit Stolen(_tokenId);
+  }
+
+  /**
+   * @dev Remove the stolen status
      * @dev Can only be called by the authorized identity that assigned the stolen status or the manager.
      * @param _tokenId token id for which removed the stolen status.
      */
-    function unsetStolenStatus(uint256 _tokenId) external onlyAuthorizedIdentityOrManager(){
-        require(msg.sender == tokenStolenIssuer[_tokenId] || msg.sender == managerIdentity);
-        tokenStolenStatus[_tokenId] = false;
-        tokenStolenIssuer[_tokenId] = address(0);
-        emit UnStolen(_tokenId);
-    }
+  function unsetStolenStatus(uint256 _tokenId) external onlyIsStolen(_tokenId) onlyAuthorizedIdentityToUnsetStolenStatusOrIssuer(_tokenId) {
+    tokenStolenStatus[_tokenId] = false;
+    tokenStolenIssuer[_tokenId] = address(0);
+    emit UnStolen(_tokenId);
+  }
 
-    /**
-     * @dev Public function to get the stolen status of token.
+  /**
+   * @dev Public function to get the stolen status of token.
      * @param _tokenId tokenId of passport.
      * @return _isStolen bool
      */
-    function isStolen(uint256 _tokenId) view external returns (bool _isStolen){
-        return tokenStolenStatus[_tokenId];
-    }
+  function isStolen(uint256 _tokenId) view external returns (bool _isStolen){
+    return tokenStolenStatus[_tokenId];
+  }
 
-    /**
-     * @dev Public function to know if an address is authorized.
+  /**
+   * @dev Public function to know if an address is authorized.
      * @param _address address to check
      * @return _isAuthorized bool
      */
-    function isAddressAuthorized(address _address) view external returns (bool _isAuthorized){
-        return authorizedIdentities[_address];
-    }
+  function isAddressAuthorized(address _address) view external returns (bool _isAuthorized){
+    return authorizedIdentities[_address];
+  }
 
-    /**
-     * @dev Public function to get the manager address.
+/**
+ * @dev Public function to get the manager address.
      * @return _managerIdentity bool
      */
-    function getManagerIdentity() view external returns (address _managerIdentity){
-        return managerIdentity;
-    }
+  function getManagerIdentity() view external returns (address _managerIdentity){
+    return managerIdentity;
+  }
 
 }
