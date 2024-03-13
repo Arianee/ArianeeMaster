@@ -4,18 +4,18 @@ pragma solidity 0.5.6;
 import "@0xcert/ethereum-utils-contracts/src/contracts/permission/ownable.sol";
 
 interface IArianeeSmartAsset {
-  function canOperate(uint256 _tokenId, address _operator) public virtual returns (bool);
+  function canOperate(uint256 _tokenId, address _operator) external returns (bool);
 
   function isTokenValid(
     uint256 _tokenId,
     bytes32 _hash,
     uint256 _tokenType,
-    bytes memory _signature
-  ) public view virtual returns (bool);
+    bytes calldata _signature
+  ) external view returns (bool);
 
-  function issuerOf(uint256 _tokenId) external view virtual returns (address _tokenIssuer);
+  function issuerOf(uint256 _tokenId) external view returns (address _tokenIssuer);
 
-  function tokenCreation(uint256 _tokenId) external view virtual returns (uint256);
+  function tokenCreation(uint256 _tokenId) external view returns (uint256);
 }
 
 contract ArianeeLost is Ownable {
@@ -87,7 +87,7 @@ contract ArianeeLost is Ownable {
   /**
    * @param _smartAssetAddress address of SmartAssetContract
    */
-  constructor(address _smartAssetAddress, address _managerIdentity) {
+  constructor(address _smartAssetAddress, address _managerIdentity) public {
     smartAsset = IArianeeSmartAsset(_smartAssetAddress);
     setManagerIdentity(_managerIdentity);
   }
