@@ -191,6 +191,17 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     );
   }
 
+  // UnorderedNonce
+
+  function invalidateUnorderedNonces(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    uint256 _wordPos,
+    uint256 _mask
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    invalidateUnorderedNonces(_tokenId, _wordPos, _mask);
+  }
+
   // IArianeeSmartAsset
 
   function addTokenAccess(
@@ -201,6 +212,65 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint256 _tokenType
   ) external onlyWithProof(_ownershipProof, _tokenId) {
     smartAsset.addTokenAccess(_tokenId, _key, _enable, _tokenType);
+  }
+
+  function recoverTokenToIssuer(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.recoverTokenToIssuer(_tokenId);
+  }
+
+  function updateRecoveryRequest(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    bool _active
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.updateRecoveryRequest(_tokenId, _active);
+  }
+
+  function destroy(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.destroy(_tokenId);
+    // Free the commitment hash when destroying the token to allow it to be reused
+    tryUnregisterCommitment(_tokenId);
+  }
+
+  function updateTokenURI(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    string calldata _uri
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.updateTokenURI(_tokenId, _uri);
+  }
+
+  function safeTransferFrom(
+    OwnershipProof calldata _ownershipProof,
+    address _from,
+    address _to,
+    uint256 _tokenId,
+    bytes calldata _data
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.safeTransferFrom(_from, _to, _tokenId, _data);
+  }
+
+  function transferFrom(
+    OwnershipProof calldata _ownershipProof,
+    address _from,
+    address _to,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.transferFrom(_from, _to, _tokenId);
+  }
+
+  function approve(
+    OwnershipProof calldata _ownershipProof,
+    address _approved,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    smartAsset.approve(_approved, _tokenId);
   }
 
   // IArianeeStore (IArianeeUpdate related functions)
@@ -277,6 +347,22 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   ) external onlyWithProof(_ownershipProof, _tokenId) {
     trySpendCredit(_creditNotePool, CREDIT_TYPE_MESSAGE, _creditNoteProof);
     store.createMessage(_messageId, _tokenId, _imprint);
+  }
+
+  // IArianeeLost
+
+  function setStolenStatus(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    arianeeLost.setStolenStatus(_tokenId);
+  }
+
+  function setMissingStatus(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, _tokenId) {
+    arianeeLost.setMissingStatus(_tokenId);
   }
 
   // TODO: Update commitment hash in case of an emergency (get some inspiration from the Ownable2Step contract)
