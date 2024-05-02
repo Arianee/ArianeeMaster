@@ -523,6 +523,4 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
   function _isFirstTransfer(uint256 _tokenId) internal view returns (bool) {
     return idToFirstTransfer[_tokenId] == true;
   }
-
 }
-

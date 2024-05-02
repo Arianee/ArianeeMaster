@@ -1,10 +1,10 @@
 {
   "name": "@arianee/arianeemaster",
   "version": "1.5.0",
-  "description": "",
   "main": "index.js",
+  "license": "UNLICENSED",
   "scripts": {
-    "ganache:start": "ganache-cli --deterministic -e 100 --port 8545 --gasLimit 8000000 --chain.chainId 5777",
+    "ganache:start": "ganache-cli --logging.debug --deterministic -e 100 --port 8545 --gasLimit 8000000 --chain.chainId 5777",
     "ganache:deploy": " truffle deploy --network test",
     "gsn:start": "npx gsn start",
     "symlink": "node createSymlink.js",
@@ -17,17 +17,15 @@
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",
     "@0xcert/ethereum-erc721-contracts": "^1.7.0",
     "@0xcert/ethereum-utils-contracts": "^1.7.0",
-    "@opengsn/contracts": "^3.0.0-beta.6",
+    "@opengsn/contracts": "3.0.0-beta.6",
     "@openzeppelin/contracts": "^4.8.3",
     "big-number": "^2.0.0",
     "truffle-hdwallet-provider": "^1.0.10"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@arianee/arianeejs": "^0.31.0",
-    "@opengsn/cli": "^3.0.0-beta.6",
-    "@opengsn/dev": "^3.0.0-beta.6",
+    "@opengsn/cli": "3.0.0-beta.6",
+    "@opengsn/dev": "3.0.0-beta.6",
     "async": "^2.6.4",
     "axios": "^0.21.2",
     "eslint": "^5.16.0",
