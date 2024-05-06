@@ -78,6 +78,15 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   IPoseidon public immutable poseidon;
 
   /**
+   * @notice The contracts used for credit notes management
+   */
+  mapping(address => bool) public creditNotePools;
+  /**
+   * @notice The addresses allowed to send intents without a CreditNoteProof
+   */
+  mapping(address => bool) public creditFreeSenders;
+
+  /**
    * @notice Mapping<TokenId, CommitmentHash>
    */
   mapping(uint256 tokenId => uint256) public commitmentHashes;
@@ -105,6 +114,9 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     arianeeLost = IArianeeLost(_arianeeLost);
     verifier = IOwnershipVerifier(_verifier);
     poseidon = IPoseidon(_poseidon);
+
+    // Allowing the initial credit note pool
+    creditNotePools[_creditNotePool] = true;
   }
 
   // OwnershipProof
@@ -160,18 +172,36 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   // CreditNoteProof
 
   function trySpendCredit(address _creditNotePool, uint256 _creditType, CreditNoteProof calldata _creditNoteProof) internal {
-    ICreditNotePool(_creditNotePool).spend(_creditType, _creditNoteProof);
+    if (creditFreeSenders[_msgSender()] == true) {
+      emit CreditFreeSenderLog(_msgSender(), _creditType);
+    } else {
+      require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Credit note pool not allowed');
+      ICreditNotePool(_creditNotePool).spend(_creditType, _creditNoteProof);
+    }
+  }
+
+  function addCreditNotePool(address _creditNotePool) external onlyOwner {
+    creditNotePools[_creditNotePool] = true;
+  }
+
+  function addCreditFreeSender(address _sender) external onlyOwner {
+    creditFreeSenders[_sender] = true;
+  }
+
+  function removeCreditFreeSender(address _sender) external onlyOwner {
+    delete creditFreeSenders[_sender];
   }
 
   // IArianeeStore (IArianeeSmartAsset related functions)
 
   function reserveToken(uint256 _commitmentHash, uint256 _tokenId) external {
+    tryRegisterCommitment(_tokenId, _commitmentHash);
     store.reserveToken(_tokenId, address(this));
   }
 
   function hydrateToken(
-    OwnershipProof calldata _ownershipProof,
-    uint256 _commitmentHash,
+    OwnershipProof calldata _ownershipProof, // If no commitment hash is provided, this proof is required
+    uint256 _commitmentHash, // If no proof is provided, this commitment hash is required
     uint256 _tokenId,
     bytes32 _imprint,
     string memory _uri,
@@ -180,6 +210,17 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bool _initialKeyIsRequestKey,
     address _interfaceProvider
   ) external {
+    if (_commitmentHash != 0)
+    {
+      // If a commitment hash is provided, we try to register it before hydrating the token
+      // This can happen if the token was not reserved before being hydrated
+      tryRegisterCommitment(_tokenId, _commitmentHash);
+    } else
+    {
+      // If no commitment hash is provided, the sender must have registered one before and provide an OwnershipProof
+      _verifyProof(_ownershipProof, _tokenId);
+    }
+
     store.hydrateToken(
       _tokenId,
       _imprint,
@@ -365,7 +406,26 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     arianeeLost.setMissingStatus(_tokenId);
   }
 
-  // TODO: Update commitment hash in case of an emergency (get some inspiration from the Ownable2Step contract)
+  // Emergency
+
+  function updateCommitment(OwnershipProof calldata _ownershipProof, uint256 _tokenId, uint256 _newCommitmentHash) public onlyWithProof(_ownershipProof, _tokenId) onlyOwner {
+    require(
+      commitmentHashes[_tokenId] != 0,
+      'ArianeeIssuerProxy: No commitment registered for this token'
+    );
+    commitmentHashes[_tokenId] = _newCommitmentHash;
+  }
+
+  function updateCommitmentBatch(OwnershipProof[] calldata _ownershipProofs, uint256[] calldata _tokenIds, uint256[] calldata _newCommitmentHashes) external onlyOwner {
+    require(
+      _ownershipProofs.length == _tokenIds.length && _tokenIds.length == _newCommitmentHashes.length,
+      'ArianeeIssuerProxy: Arrays length mismatch'
+    );
+
+    for (uint256 i = 0; i < _tokenIds.length; i++) {
+      updateCommitment(_ownershipProofs[i], _tokenIds[i], _newCommitmentHashes[i]);
+    }
+  }
 
   // ERC2771Recipient
 
