@@ -153,6 +153,10 @@ contract("Cross Contracts", (accounts) => {
       { from: accounts[1] }
     );
 
+    count[2] = await ariaInstance.balanceOf(accounts[2]);
+    count[3] = await ariaInstance.balanceOf(accounts[3]);
+    count[4] = (await ariaInstance.balanceOf(accounts[4])).toString();
+
     await arianeeStoreInstance.methods["requestToken(uint256,bytes32,bool,address,bytes)"](
       1,
       signedMessage.messageHash,
@@ -167,9 +171,6 @@ contract("Cross Contracts", (accounts) => {
     let count = [];
     count[0] = await ariaInstance.balanceOf(accounts[0]);
     count[1] = (await ariaInstance.balanceOf(accounts[1])).toString();
-    count[2] = await ariaInstance.balanceOf(accounts[2]);
-    count[3] = await ariaInstance.balanceOf(accounts[3]);
-    count[4] = (await ariaInstance.balanceOf(accounts[4])).toString();
     count[5] = await ariaInstance.balanceOf(accounts[5]);
     count[6] = await ariaInstance.balanceOf(accounts[6]);
 

@@ -91,6 +91,11 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     mapping (uint256 => address) tokenToWalletProvider;
 
     /**
+     * @dev Mapping from token id to rewards.
+     */
+    mapping(uint256 => uint256) internal rewards;
+
+    /**
      * @dev This emits when a new address is set.
      */
     event SetAddress(string _addressType, address _newAddress);
@@ -266,6 +271,12 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         if (tokenExists == false) {
             reserveToken(_tokenId, _msgSender());
         }
+
+        uint256 _reward = _spendCreditFunction(0, 1, _msgSender());
+
+        _dispatchRewardsAtHydrate(_providerBrand, _reward);
+
+        rewards[_tokenId] = _reward;
 
         nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _msgSender());
         tokenToNmpProvider[_tokenId] = _providerBrand;
@@ -526,9 +537,9 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @param _quantity of credit to spend.
      */
     function _spendCreditFunction(uint256 _type, uint256 _quantity, address consumer) internal returns (uint256) {
-        uint256 rewards = creditHistory.consumeCredits(consumer, _type, _quantity);
+        uint256 reward = creditHistory.consumeCredits(consumer, _type, _quantity);
         emit CreditSpended(_type, _quantity);
-        return rewards;
+        return reward;
     }
 
     /**
@@ -559,8 +570,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      */
     function dispatchRewardsAtFirstTransfer(uint256 _tokenId, address _newOwner) external onlySmartAsset {
         // The responsability of checking if first transfer rewards are already dispatched is on the ArianeeSmartAsset contract.
-        address issuer = nonFungibleRegistry.issuerOf(_tokenId);
-        uint256 _reward = _spendCreditFunction(0, 1, issuer);
+        uint256 _reward = rewards[_tokenId];
 
         address _nmpProvider = tokenToNmpProvider[_tokenId];
         address _walletProvider = tokenToWalletProvider[_tokenId];
@@ -569,10 +579,9 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
             _walletProvider = _nmpProvider;
         }
 
-        acceptedToken.transfer(protocolInfraAddress, (_reward / 100) * dispatchPercent[0]);
-        acceptedToken.transfer(_nmpProvider, (_reward / 100) * dispatchPercent[1]);
+        rewards[_tokenId] = 0;
+
         acceptedToken.transfer(_walletProvider, (_reward / 100) * dispatchPercent[2]);
-        acceptedToken.transfer(arianeeProjectAddress, (_reward / 100) * dispatchPercent[3]);
         acceptedToken.transfer(_newOwner, (_reward / 100) * dispatchPercent[4]);
     }
 
