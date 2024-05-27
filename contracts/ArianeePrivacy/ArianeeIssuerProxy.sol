@@ -7,6 +7,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 import './UnorderedNonce.sol';
 import '../Utilities/ByteUtils.sol';
+
 import '../Interfaces/IArianeeStore.sol';
 import '../Interfaces/IArianeeSmartAsset.sol';
 import '../Interfaces/IArianeeEvent.sol';
@@ -46,9 +47,9 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint[3] _pubSignals; // 96 bytes
   } // Total: 352 bytes
 
-
   uint256 public constant SELECTOR_SIZE = 4;
   uint256 public constant OWNERSHIP_PROOF_SIZE = 352;
+  uint256 public constant CREDIT_NOTE_PROOF_SIZE = 416;
 
   /**
    * @notice The ArianeeStore contract used to pass issuer intents
@@ -121,12 +122,12 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   // OwnershipProof
 
-  modifier onlyWithProof(OwnershipProof calldata _ownershipProof, uint256 _tokenId) {
-    _verifyProof(_ownershipProof, _tokenId);
+  modifier onlyWithProof(OwnershipProof calldata _ownershipProof, bool needsCreditNoteProof, uint256 _tokenId) {
+    _verifyProof(_ownershipProof, needsCreditNoteProof, _tokenId);
     _;
   }
 
-  function _verifyProof(OwnershipProof calldata _ownershipProof, uint256 _tokenId) internal {
+  function _verifyProof(OwnershipProof calldata _ownershipProof, bool needsCreditNoteProof, uint256 _tokenId) internal {
     require(commitmentHashes[_tokenId] != 0, 'ArianeeIssuerProxy: No commitment registered for this token');
 
     uint256 pCommitmentHash = _ownershipProof._pubSignals[0];
@@ -137,8 +138,8 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
     uint256 pIntentHash = _ownershipProof._pubSignals[1];
     bytes memory msgData = _msgData();
-    // Removing the first 4 bytes (function selector) and the next 352 bytes (proof size) from the msg.data before computing the hash to compare
-    uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(msgData.slice(0, SELECTOR_SIZE), msgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE, msgData.length))))]));
+    // Removing the `OwnershipProof` (352 bytes) and if needed the `CreditNoteProof` (416 bytes) from the msg.data before computing the hash to compare
+    uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(msgData.slice(0, SELECTOR_SIZE), msgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + (needsCreditNoteProof ? CREDIT_NOTE_PROOF_SIZE : 0), msgData.length))))]));
     require(
       pIntentHash == msgDataHash,
       'ArianeePrivacyProxy: Proof intent does not match the function call'
@@ -176,7 +177,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
       emit CreditFreeSenderLog(_msgSender(), _creditType);
     } else {
       require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Credit note pool not allowed');
-      ICreditNotePool(_creditNotePool).spend(_creditType, _creditNoteProof);
+      ICreditNotePool(_creditNotePool).spend(_creditNoteProof, _creditType, address(this));
     }
   }
 
@@ -218,7 +219,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     } else
     {
       // If no commitment hash is provided, the sender must have registered one before and provide an OwnershipProof
-      _verifyProof(_ownershipProof, _tokenId);
+      _verifyProof(_ownershipProof, false, _tokenId);
     }
 
     store.hydrateToken(
@@ -239,7 +240,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint256 _tokenId,
     uint256 _wordPos,
     uint256 _mask
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     invalidateUnorderedNonces(_tokenId, _wordPos, _mask);
   }
 
@@ -251,14 +252,14 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     address _key,
     bool _enable,
     uint256 _tokenType
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.addTokenAccess(_tokenId, _key, _enable, _tokenType);
   }
 
   function recoverTokenToIssuer(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.recoverTokenToIssuer(_tokenId);
   }
 
@@ -266,14 +267,14 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId,
     bool _active
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.updateRecoveryRequest(_tokenId, _active);
   }
 
   function destroy(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.destroy(_tokenId);
     // Free the commitment hash when destroying the token to allow it to be reused
     tryUnregisterCommitment(_tokenId);
@@ -283,7 +284,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId,
     string calldata _uri
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.updateTokenURI(_tokenId, _uri);
   }
 
@@ -293,7 +294,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     address _to,
     uint256 _tokenId,
     bytes calldata _data
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.safeTransferFrom(_from, _to, _tokenId, _data);
   }
 
@@ -302,7 +303,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     address _from,
     address _to,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.transferFrom(_from, _to, _tokenId);
   }
 
@@ -310,7 +311,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     OwnershipProof calldata _ownershipProof,
     address _approved,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     smartAsset.approve(_approved, _tokenId);
   }
 
@@ -323,7 +324,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint256 _tokenId,
     bytes32 _imprint,
     address _interfaceProvider
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, true, _tokenId) {
     trySpendCredit(_creditNotePool, CREDIT_TYPE_UPDATE, _creditNoteProof);
     store.updateSmartAsset(_tokenId, _imprint, _interfaceProvider);
   }
@@ -339,7 +340,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     string calldata _uri,
     address _interfaceProvider
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, true, _tokenId) {
     trySpendCredit(_creditNotePool, CREDIT_TYPE_EVENT, _creditNoteProof);
     store.createEvent(_eventId, _tokenId, _imprint, _uri, _interfaceProvider);
   }
@@ -349,7 +350,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
 
     // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, tokenId);
+    _verifyProof(_ownershipProof, false, tokenId);
 
     store.acceptEvent(_eventId, _interfaceProvider);
   }
@@ -361,7 +362,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
 
     // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, tokenId);
+    _verifyProof(_ownershipProof, false, tokenId);
 
     arianeeEvent.destroy(_eventId);
   }
@@ -371,7 +372,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
 
     // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, tokenId);
+    _verifyProof(_ownershipProof, false, tokenId);
 
     arianeeEvent.updateDestroyRequest(_eventId, _active);
   }
@@ -385,7 +386,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint256 _messageId,
     uint256 _tokenId,
     bytes32 _imprint
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, true, _tokenId) {
     trySpendCredit(_creditNotePool, CREDIT_TYPE_MESSAGE, _creditNoteProof);
     store.createMessage(_messageId, _tokenId, _imprint);
   }
@@ -395,20 +396,20 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   function setStolenStatus(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     arianeeLost.setStolenStatus(_tokenId);
   }
 
   function setMissingStatus(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId
-  ) external onlyWithProof(_ownershipProof, _tokenId) {
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     arianeeLost.setMissingStatus(_tokenId);
   }
 
   // Emergency
 
-  function updateCommitment(OwnershipProof calldata _ownershipProof, uint256 _tokenId, uint256 _newCommitmentHash) public onlyWithProof(_ownershipProof, _tokenId) onlyOwner {
+  function updateCommitment(OwnershipProof calldata _ownershipProof, uint256 _tokenId, uint256 _newCommitmentHash) public onlyWithProof(_ownershipProof, false, _tokenId) onlyOwner {
     require(
       commitmentHashes[_tokenId] != 0,
       'ArianeeIssuerProxy: No commitment registered for this token'
@@ -435,5 +436,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   function _msgData() internal view override(Context, ERC2771Recipient) returns (bytes calldata ret) {
     ret = ERC2771Recipient._msgData();
+  }
+
+  // Utilities
+
+  function isDefaultCreditNoteProof(CreditNoteProof memory _proof) public pure returns (bool) {
+    return _proof._pA[0] == 0 && _proof._pA[1] == 0 && _proof._pB[0][0] == 0 && _proof._pB[0][1] == 0 && _proof._pB[1][0] == 0 && _proof._pB[1][1] == 0 && _proof._pC[0] == 0 && _proof._pC[1] == 0 && _proof._pubSignals[0] == 0 && _proof._pubSignals[1] == 0 && _proof._pubSignals[2] == 0 && _proof._pubSignals[3] == 0;
   }
 }
