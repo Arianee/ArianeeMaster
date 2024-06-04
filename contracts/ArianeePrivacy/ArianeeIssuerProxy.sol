@@ -12,7 +12,7 @@ import '../Interfaces/IArianeeStore.sol';
 import '../Interfaces/IArianeeSmartAsset.sol';
 import '../Interfaces/IArianeeEvent.sol';
 import '../Interfaces/IArianeeLost.sol';
-import '../Interfaces/ICreditNotePool.sol';
+import '../Interfaces/IArianeeCreditNotePool.sol';
 
 interface IOwnershipVerifier {
   function verifyProof(
@@ -211,13 +211,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bool _initialKeyIsRequestKey,
     address _interfaceProvider
   ) external {
-    if (_commitmentHash != 0)
-    {
+    if (_commitmentHash != 0) {
       // If a commitment hash is provided, we try to register it before hydrating the token
       // This can happen if the token was not reserved before being hydrated
       tryRegisterCommitment(_tokenId, _commitmentHash);
-    } else
-    {
+    } else {
       // If no commitment hash is provided, the sender must have registered one before and provide an OwnershipProof
       _verifyProof(_ownershipProof, false, _tokenId);
     }
