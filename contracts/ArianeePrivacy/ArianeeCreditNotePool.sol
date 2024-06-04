@@ -27,7 +27,7 @@ interface IPoseidon {
     function poseidon(bytes32[1] memory input) external pure returns (bytes32);
 }
 
-contract CreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistory, ERC2771Recipient {
+contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistory, ERC2771Recipient {
     using ByteUtils for bytes;
     using SafeERC20 for IERC20;
 
