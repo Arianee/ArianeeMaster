@@ -13,6 +13,7 @@ import '../Interfaces/IArianeeSmartAsset.sol';
 import '../Interfaces/IArianeeEvent.sol';
 import '../Interfaces/IArianeeLost.sol';
 import '../Interfaces/IArianeeCreditNotePool.sol';
+import '../Interfaces/IPoseidon.sol';
 
 interface IOwnershipVerifier {
   function verifyProof(
@@ -23,18 +24,13 @@ interface IOwnershipVerifier {
   ) external view returns (bool);
 }
 
-interface IPoseidon {
-  function poseidon(bytes32[1] memory input) external pure returns (bytes32);
-}
-
 contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ERC2771Recipient {
   using ByteUtils for bytes;
 
-  uint256 public constant CREDIT_TYPE_CERTIFICATE = 1;
-  // TODO: ^ Choose what to do with this, recommend to modify IArianeeStore.requestToken (ask for a proof at claim or pay at hydrate)
-  uint256 public constant CREDIT_TYPE_EVENT = 2;
-  uint256 public constant CREDIT_TYPE_MESSAGE = 3;
-  uint256 public constant CREDIT_TYPE_UPDATE = 4;
+  uint256 public constant ZK_CREDIT_TYPE_CERTIFICATE = 1;
+  uint256 public constant ZK_CREDIT_TYPE_MESSAGE = 2;
+  uint256 public constant ZK_CREDIT_TYPE_EVENT = 3;
+  uint256 public constant ZK_CREDIT_TYPE_UPDATE = 4;
 
   /**
    * @notice The OwnershipProof must be the first argument if used in a function
@@ -49,7 +45,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   uint256 public constant SELECTOR_SIZE = 4;
   uint256 public constant OWNERSHIP_PROOF_SIZE = 352;
-  uint256 public constant CREDIT_NOTE_PROOF_SIZE = 416;
+  uint256 public constant CREDIT_NOTE_PROOF_SIZE = 352;
 
   /**
    * @notice The ArianeeStore contract used to pass issuer intents
@@ -103,7 +99,6 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     address _arianeeEvent,
     address _arianeeLost,
     address _verifier,
-    address _creditNotePool,
     address _poseidon,
     address _trustedForwarder
   ) {
@@ -115,9 +110,6 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     arianeeLost = IArianeeLost(_arianeeLost);
     verifier = IOwnershipVerifier(_verifier);
     poseidon = IPoseidon(_poseidon);
-
-    // Allowing the initial credit note pool
-    creditNotePools[_creditNotePool] = true;
   }
 
   // OwnershipProof
@@ -138,7 +130,8 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
     uint256 pIntentHash = _ownershipProof._pubSignals[1];
     bytes memory msgData = _msgData();
-    // Removing the `OwnershipProof` (352 bytes) and if needed the `CreditNoteProof` (416 bytes) from the msg.data before computing the hash to compare
+
+    // Removing the `OwnershipProof` (352 bytes) and if needed the `CreditNoteProof` (352 bytes) from the msg.data before computing the hash to compare
     uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(msgData.slice(0, SELECTOR_SIZE), msgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + (needsCreditNoteProof ? CREDIT_NOTE_PROOF_SIZE : 0), msgData.length))))]));
     require(
       pIntentHash == msgDataHash,
@@ -150,7 +143,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
     require(
       verifier.verifyProof(_ownershipProof._pA, _ownershipProof._pB, _ownershipProof._pC, _ownershipProof._pubSignals),
-      'ArianeePrivacyProxy: Proof verification failed'
+      'ArianeePrivacyProxy: OwnershipProof verification failed'
     );
   }
 
@@ -177,7 +170,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
       emit CreditFreeSenderLog(_msgSender(), _creditType);
     } else {
       require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Credit note pool not allowed');
-      ICreditNotePool(_creditNotePool).spend(_creditNoteProof, _creditType, address(this));
+      ICreditNotePool(_creditNotePool).spend(_creditNoteProof, _creditType);
     }
   }
 
@@ -202,6 +195,8 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   function hydrateToken(
     OwnershipProof calldata _ownershipProof, // If no commitment hash is provided, this proof is required
+    CreditNoteProof calldata _creditNoteProof,
+    address _creditNotePool,
     uint256 _commitmentHash, // If no proof is provided, this commitment hash is required
     uint256 _tokenId,
     bytes32 _imprint,
@@ -217,8 +212,10 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
       tryRegisterCommitment(_tokenId, _commitmentHash);
     } else {
       // If no commitment hash is provided, the sender must have registered one before and provide an OwnershipProof
-      _verifyProof(_ownershipProof, false, _tokenId);
+      _verifyProof(_ownershipProof, true, _tokenId);
     }
+
+    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
 
     store.hydrateToken(
       _tokenId,
@@ -323,7 +320,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, CREDIT_TYPE_UPDATE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_UPDATE, _creditNoteProof);
     store.updateSmartAsset(_tokenId, _imprint, _interfaceProvider);
   }
 
@@ -339,7 +336,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     string calldata _uri,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, CREDIT_TYPE_EVENT, _creditNoteProof);
+    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_EVENT, _creditNoteProof);
     store.createEvent(_eventId, _tokenId, _imprint, _uri, _interfaceProvider);
   }
 
@@ -385,7 +382,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     uint256 _tokenId,
     bytes32 _imprint
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, CREDIT_TYPE_MESSAGE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_MESSAGE, _creditNoteProof);
     store.createMessage(_messageId, _tokenId, _imprint);
   }
 
@@ -439,6 +436,6 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   // Utilities
 
   function isDefaultCreditNoteProof(CreditNoteProof memory _proof) public pure returns (bool) {
-    return _proof._pA[0] == 0 && _proof._pA[1] == 0 && _proof._pB[0][0] == 0 && _proof._pB[0][1] == 0 && _proof._pB[1][0] == 0 && _proof._pB[1][1] == 0 && _proof._pC[0] == 0 && _proof._pC[1] == 0 && _proof._pubSignals[0] == 0 && _proof._pubSignals[1] == 0 && _proof._pubSignals[2] == 0 && _proof._pubSignals[3] == 0;
+    return _proof._pA[0] == 0 && _proof._pA[1] == 0 && _proof._pB[0][0] == 0 && _proof._pB[0][1] == 0 && _proof._pB[1][0] == 0 && _proof._pB[1][1] == 0 && _proof._pC[0] == 0 && _proof._pC[1] == 0 && _proof._pubSignals[0] == 0 && _proof._pubSignals[1] == 0 && _proof._pubSignals[2] == 0;
   }
 }

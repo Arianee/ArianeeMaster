@@ -13,23 +13,36 @@ import '../Utilities/ByteUtils.sol';
 import '../Interfaces/IArianeeStore.sol';
 import '../Interfaces/IArianeeSmartAsset.sol';
 import '../Interfaces/IArianeeEvent.sol';
+import '../Interfaces/IPoseidon.sol';
+
+interface ICreditRegister {
+    function verifyProof(
+        uint[2] calldata _pA,
+        uint[2][2] calldata _pB,
+        uint[2] calldata _pC,
+        uint[2] calldata _pubSignals
+    ) external view returns (bool);
+}
 
 interface ICreditVerifier {
     function verifyProof(
         uint[2] calldata _pA,
         uint[2][2] calldata _pB,
         uint[2] calldata _pC,
-        uint[5] calldata _pubSignals
+        uint[3] calldata _pubSignals
     ) external view returns (bool);
-}
-
-interface IPoseidon {
-    function poseidon(bytes32[1] memory input) external pure returns (bytes32);
 }
 
 contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistory, ERC2771Recipient {
     using ByteUtils for bytes;
     using SafeERC20 for IERC20;
+
+    struct CreditRegistrationProof {
+        uint[2] _pA;
+        uint[2][2] _pB;
+        uint[2] _pC;
+        uint[2] _pubSignals;
+    }
 
     /**
      * @notice The CreditNoteProof must be the second argument if used in a function
@@ -39,14 +52,19 @@ contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistor
         uint[2] _pA; // 64 bytes
         uint[2][2] _pB; // 128 bytes
         uint[2] _pC; // 64 bytes
-        uint[5] _pubSignals; // 160 bytes
-    } // Total: 416 bytes
+        uint[3] _pubSignals; // 96 bytes
+    } // Total: 352 bytes
 
     uint256 public constant SELECTOR_SIZE = 4;
     uint256 public constant OWNERSHIP_PROOF_SIZE = 352;
-    uint256 public constant CREDIT_NOTE_PROOF_SIZE = 416;
+    uint256 public constant CREDIT_NOTE_PROOF_SIZE = 352;
 
     uint256 public constant MAX_NULLIFIER_PER_COMMITMENT = 1000;
+
+    /**
+     * @notice The address of the ArianeeIssuerProxy contract (the only one allowed to interact with this contract)
+     */
+    address public issuerProxy;
 
     /**
      * @notice The ERC20 token used to purchase credits
@@ -59,9 +77,14 @@ contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistor
     IArianeeStore public store;
 
     /**
-     * @notice The contract used to verify the credit note proofs
+     * @notice The contract used to verify the `creditRegister` proofs
      */
-    ICreditVerifier public verifier;
+    ICreditRegister public creditRegister;
+
+    /**
+     * @notice The contract used to verify the `creditVerifier` proofs
+     */
+    ICreditVerifier public creditVerifier;
 
     /**
      * @notice The contract used to compute Poseidon hashes
@@ -79,23 +102,21 @@ contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistor
 
     /**
      * @notice Emitted when a credit note is purchased
+     * @dev The `creditType` is 0-indexed
      */
-    event Purchased(
-        uint256 creditType,
-        bytes32 commitmentHash,
-        uint32 leafIndex,
-        address indexed issuerProxy,
-        uint256 timestamp
-    );
+    event Purchased(uint256 creditType, bytes32 commitmentHash, uint32 indexed leafIndex, uint256 timestamp);
     /**
      * @notice Emitted when a credit note is spent
+     * @dev The `creditType` is 0-indexed
      */
     event Spent(uint256 creditType, bytes32 nullifierHash, uint256 timestamp);
 
     constructor(
+        address _issuerProxy,
         address _token,
         address _store,
-        address _verifier,
+        address _creditRegister,
+        address _creditVerifier,
         uint32 _merkleTreeHeight,
         address _hasher,
         address _poseidon,
@@ -103,97 +124,126 @@ contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistor
     ) MerkleTreeWithHistory(_merkleTreeHeight, _hasher) {
         _setTrustedForwarder(_trustedForwarder);
 
+        issuerProxy = _issuerProxy;
         token = IERC20(_token);
         store = IArianeeStore(_store);
-        verifier = ICreditVerifier(_verifier);
+        creditRegister = ICreditRegister(_creditRegister);
+        creditVerifier = ICreditVerifier(_creditVerifier);
         poseidon = IPoseidon(_poseidon);
     }
 
-    function purchase(bytes32 _commitmentHash, uint256 _creditType, address _issuerProxy) external nonReentrant {
-        require(_creditType >= 1 && _creditType <= 4, 'CreditNotePool: The credit type should be either 1, 2, 3 or 4');
-        require(!commitmentHashes[_commitmentHash], 'CreditNotePool: This commitment has already been registered');
+    modifier onlyIssuerProxy() {
+        require(
+            _msgSender() == issuerProxy,
+            'ArianeeCreditNotePool: This function can only be called by the ArianeIssuerProxy contract'
+        );
+        _;
+    }
+
+    /**
+     * @dev WARNING: The parameter `_zkCreditType` is the credit type that the user wants to purchase BUT it is 1-indexed.
+     * This is done on purpose for easier circuit implementation.
+     * Example: If the user wants to purchase a "certificate" credit (type 0), the `_zkCreditType` should be 1.
+     * @notice Emits a `Purchased` event when a credit note is successfully purchased (`creditType` is 0-indexed)
+     */
+    function purchase(CreditRegistrationProof calldata _creditRegistrationProof, bytes32 _commitmentHash, uint256 _zkCreditType) external nonReentrant {
+        require(
+            _zkCreditType >= 1 && _zkCreditType <= 4,
+            'ArianeeCreditNotePool: The credit type should be either 1, 2, 3 or 4'
+        );
+        require(
+            !commitmentHashes[_commitmentHash],
+            'ArianeeCreditNotePool: This commitment has already been registered'
+        );
+
+        _verifyRegistrationProof(_creditRegistrationProof, _commitmentHash, _zkCreditType);
 
         uint32 insertedIndex = _insert(_commitmentHash);
         commitmentHashes[_commitmentHash] = true;
 
         // The credit type is 0-indexed in the store, but 1-indexed in the commitment
-        uint256 creditPrice = store.getCreditPrice(_creditType - 1);
+        uint256 creditType = _zkCreditType - 1;
+        uint256 creditPrice = store.getCreditPrice(creditType);
 
         // One credit note is worth `MAX_NULLIFIER_PER_COMMITMENT` credits
         uint256 amount = MAX_NULLIFIER_PER_COMMITMENT * creditPrice;
 
         // The caller should have approved the contract to transfer the amount of tokens
         token.safeTransferFrom(_msgSender(), address(this), amount);
-        store.buyCredit(_creditType, MAX_NULLIFIER_PER_COMMITMENT, _issuerProxy);
 
-        emit Purchased(_creditType, _commitmentHash, insertedIndex, _issuerProxy, block.timestamp);
+        // Approve the store to transfer the required amount of tokens
+        token.approve(address(store), amount);
+        // Buy the credits from the store
+        store.buyCredit(creditType, MAX_NULLIFIER_PER_COMMITMENT, issuerProxy);
+
+        emit Purchased(creditType, _commitmentHash, insertedIndex, block.timestamp);
+    }
+
+    function _verifyRegistrationProof(
+        CreditRegistrationProof calldata _creditRegistrationProof,
+        bytes32 _commitmentHash,
+        uint256 _zkCreditType
+    ) internal view {
+        bytes32 pCommitmentHash = bytes32(_creditRegistrationProof._pubSignals[0]);
+        require(
+            pCommitmentHash == _commitmentHash,
+            'ArianeeCreditNotePool: Proof commitment does not match the function argument `_commitmentHash`'
+        );
+
+        uint256 pCreditType = _creditRegistrationProof._pubSignals[1];
+        require(
+            pCreditType == _zkCreditType,
+            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
+        );
+
+        require(
+            creditRegister.verifyProof(
+                _creditRegistrationProof._pA,
+                _creditRegistrationProof._pB,
+                _creditRegistrationProof._pC,
+                _creditRegistrationProof._pubSignals
+            ),
+            'ArianeeCreditNotePool: CreditRegistrationProof verification failed'
+        );
     }
 
     function spend(
         CreditNoteProof calldata _creditNoteProof,
-        uint256 _creditType,
-        address _issuerProxy
-    ) external nonReentrant {
-        _verifyProof(_creditNoteProof, _creditType, _issuerProxy);
+        uint256 _zkCreditType
+    ) public onlyIssuerProxy nonReentrant {
+        _verifyProof(_creditNoteProof, _zkCreditType);
 
-        bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[3]);
-        nullifierHashes[bytes32(_creditNoteProof._pubSignals[3])] = true;
-        emit Spent(_creditType, pNullifierHash, block.timestamp);
+        bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
+        nullifierHashes[bytes32(_creditNoteProof._pubSignals[2])] = true;
+
+        uint256 creditType = _zkCreditType - 1;
+        emit Spent(creditType, pNullifierHash, block.timestamp);
     }
 
-    function _verifyProof(
-        CreditNoteProof calldata _creditNoteProof,
-        uint256 _creditType,
-        address _issuerProxy
-    ) internal view {
+    function _verifyProof(CreditNoteProof calldata _creditNoteProof, uint256 _zkCreditType) internal view {
         bytes32 pRoot = bytes32(_creditNoteProof._pubSignals[0]);
-        require(isKnownRoot(pRoot), 'CreditNotePool: Cannot find your merkle root'); // Make sure to use a recent one
+        require(isKnownRoot(pRoot), 'ArianeeCreditNotePool: Cannot find your merkle root'); // Make sure to use a recent one
 
         uint256 pCreditType = _creditNoteProof._pubSignals[1];
         require(
-            pCreditType == _creditType,
-            'CreditNotePool: Proof credit type does not match the function argument `_creditType`'
+            pCreditType == _zkCreditType,
+            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
         );
 
-        uint256 pIssuerProxy = _creditNoteProof._pubSignals[2];
-        require(
-            pIssuerProxy == uint256(uint160(_issuerProxy)),
-            'CreditNotePool: Proof issuer proxy address does not match the function argument `_issuerProxy`'
-        );
+        bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
+        require(!nullifierHashes[pNullifierHash], 'ArianeeCreditNotePool: This note has already been spent');
 
-        bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[3]);
-        require(!nullifierHashes[pNullifierHash], 'CreditNotePool: This note has already been spent');
-
-        uint256 pIntentHash = _creditNoteProof._pubSignals[4];
-        bytes memory msgData = _msgData();
-        // Removing the `OwnershipProof` (352 bytes) and the `CreditNoteProof` (416 bytes) from the msg.data before computing the hash to compare
-        uint256 msgDataHash = uint256(
-            poseidon.poseidon(
-                [
-                    keccak256(
-                        abi.encodePacked(
-                            bytes.concat(
-                                msgData.slice(0, SELECTOR_SIZE),
-                                msgData.slice(
-                                    SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + CREDIT_NOTE_PROOF_SIZE,
-                                    msgData.length
-                                )
-                            )
-                        )
-                    )
-                ]
-            )
-        );
-        require(pIntentHash == msgDataHash, 'CreditNotePool: Proof intent does not match the function call');
+        // We don't check the intent hash in the `ArianeeCreditNotePool` contract because it is already checked in the `ArianeeIssuerProxy` contract
+        // and the `ArianeeIssuerProxy` contract is the only one allowed to call the `spend` function.
 
         require(
-            verifier.verifyProof(
+            creditVerifier.verifyProof(
                 _creditNoteProof._pA,
                 _creditNoteProof._pB,
                 _creditNoteProof._pC,
                 _creditNoteProof._pubSignals
             ),
-            'CreditNotePool: Proof verification failed'
+            'ArianeeCreditNotePool: CreditNoteProof verification failed'
         );
     }
 

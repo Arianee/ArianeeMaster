@@ -10,11 +10,9 @@ const ArianeeMessage = artifacts.require("ArianeeMessage");
 const ArianeeUpdate = artifacts.require("ArianeeUpdate");
 const ArianeeUserAction = artifacts.require("ArianeeUserAction");
 
-const catchRevert = require("./helpers/exceptions.js").catchRevert;
-const bigNumber = require("big-number");
 const { GsnTestEnvironment } = require("@opengsn/dev");
 
-contract("Cross Contracts", (accounts) => {
+contract("CrossContracts", (accounts) => {
   let arianeeSmartAssetInstance,
     ariaInstance,
     arianeeStoreInstance,
@@ -30,7 +28,7 @@ contract("Cross Contracts", (accounts) => {
 
   before(async () => {
     forwarderAddress = (await GsnTestEnvironment.loadDeployment()).forwarderAddress;
-    console.log('[Cross Contracts] Forwarder address: ', forwarderAddress);
+    console.log('[CrossContracts] Forwarder address: ', forwarderAddress);
   });
 
   beforeEach(async () => {
@@ -80,7 +78,7 @@ contract("Cross Contracts", (accounts) => {
       forwarderAddress
     );
 
-    const identityInstance = await ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
+    await ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
 
     await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
     await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);

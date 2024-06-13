@@ -273,9 +273,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         }
 
         uint256 _reward = _spendCreditFunction(0, 1, _msgSender());
-
         _dispatchRewardsAtHydrate(_providerBrand, _reward);
-
         rewards[_tokenId] = _reward;
 
         nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _msgSender());
@@ -382,7 +380,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     function createEvent(uint256 _eventId, uint256 _tokenId, bytes32 _imprint, string calldata _uri, address _providerBrand) external whenNotPaused(){
         uint256 _rewards = _spendCreditFunction(2, 1, _msgSender());
         arianeeEvent.create(_eventId, _tokenId, _imprint, _uri, _rewards, _msgSender());
-        _dispatchRewardsAtHydrate(_providerBrand, _rewards);
+       _dispatchRewardsAtHydrate(_providerBrand, _rewards);
     }
 
     /**
