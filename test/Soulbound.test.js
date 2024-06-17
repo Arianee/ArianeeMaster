@@ -77,7 +77,7 @@ contract("Soulbound", (accounts) => {
       forwarderAddress
     );
 
-    const identityInstance = await ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
+    await ArianeeIdentity.new(bouncerAddress, validatorAddress, forwarderAddress);
 
     await arianeeStoreInstance.setArianeeProjectAddress(projectAddress);
     await arianeeStoreInstance.setProtocolInfraAddress(infraAddress);

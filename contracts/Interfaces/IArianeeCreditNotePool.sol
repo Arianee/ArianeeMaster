@@ -9,11 +9,11 @@ struct CreditNoteProof {
     uint[2] _pA; // 64 bytes
     uint[2][2] _pB; // 128 bytes
     uint[2] _pC; // 64 bytes
-    uint[5] _pubSignals; // 160 bytes
-} // Total: 416 bytes
+    uint[3] _pubSignals; // 96 bytes
+} // Total: 352 bytes
 
 interface ICreditNotePool {
-    function purchase(bytes32 _commitmentHash, uint256 _creditType, address _issuerProxy) external;
+    function purchase(bytes32 _commitmentHash, uint256 _zkCreditType) external;
 
-    function spend(CreditNoteProof calldata _creditNoteProof, uint256 _creditType, address _issuerProxy) external;
+    function spend(CreditNoteProof calldata _creditNoteProof, uint256 _zkCreditType) external;
 }

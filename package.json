@@ -4,26 +4,32 @@
   "main": "index.js",
   "license": "UNLICENSED",
   "scripts": {
-    "ganache:start": "ganache-cli --logging.debug --deterministic -e 100 --port 8545 --gasLimit 8000000 --chain.chainId 5777",
-    "ganache:deploy": " truffle deploy --network test",
+    "ganache": "ganache-cli -d -e 100 -p 8545 -l 8000000 --chain.chainId 5577 --logging.debug",
+    "ganache:deploy": "truffle deploy --network test",
     "gsn:start": "npx gsn start",
     "symlink": "node createSymlink.js",
     "lint": "eslint './**/*.js?(x)'",
     "clean": "rm -r build/",
-    "test": "truffle compile; truffle test --network test",
+    "test": "truffle test --network test --debug",
     "deployTestnet": "truffle migrate --network arianeeTest --reset; node createIdentity.js --network arianeeTest --identityAddress 0x59d3631c86BbE35EF041872d502F218A39FBa150 --storeAddress 0xe982E462b094850F12AF94d21D470e21bE9D0E9C --ariaAddress 0xCfEB869F69431e42cdB54A4F4f105C19C080A601"
   },
   "dependencies": {
     "@0xcert/ethereum-erc20-contracts": "^1.7.0",
     "@0xcert/ethereum-erc721-contracts": "^1.7.0",
     "@0xcert/ethereum-utils-contracts": "^1.7.0",
+    "@arianee/arianee-protocol-client": "1.68.0",
+    "@arianee/core": "1.68.0",
+    "@arianee/privacy-circuits": "1.68.0",
+    "@arianee/utils": "1.68.0",
     "@opengsn/contracts": "3.0.0-beta.6",
     "@openzeppelin/contracts": "^4.8.3",
     "big-number": "^2.0.0",
+    "circomlibjs": "0.1.7",
+    "ethers": "6.7.0",
     "truffle-hdwallet-provider": "^1.0.10"
   },
   "devDependencies": {
-    "@arianee/arianeejs": "^0.31.0",
+    "@arianee/arianeejs": "0.31.0",
     "@opengsn/cli": "3.0.0-beta.6",
     "@opengsn/dev": "3.0.0-beta.6",
     "async": "^2.6.4",
@@ -31,9 +37,9 @@
     "eslint": "^5.16.0",
     "eslint-utils": ">=1.4.1",
     "lodash": ">=4.17.21",
-    "truffle": "^5.8.4",
-    "truffle-assertions": "^0.9.2",
-    "web3": "^1.8.2",
+    "truffle": "5.11.5",
+    "truffle-assertions": "0.9.2",
+    "web3": "1.10.3",
     "yargs": "^15.0.2"
   }
 }

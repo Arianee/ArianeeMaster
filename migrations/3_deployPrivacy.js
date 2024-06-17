@@ -3,21 +3,29 @@ const { GsnTestEnvironment } = require("@opengsn/dev");
 const ArianeeIssuerProxy = artifacts.require("ArianeeIssuerProxy");
 const OwnershipVerifier = artifacts.require("OwnershipVerifier");
 
-const CreditNotePool = artifacts.require("CreditNotePool");
+const ArianeeCreditNotePool = artifacts.require("ArianeeCreditNotePool");
+const CreditRegister = artifacts.require("CreditRegister");
 const CreditVerifier = artifacts.require("CreditVerifier");
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 const FORWARDER_ADDR = "0x0000000000000000000000000000000000000001"; // If set to null, the forwarder address will be taken from the GSN test environment
 
+const ArianeeStore = artifacts.require("ArianeeStore");
+const ArianeeSmartAsset = artifacts.require("ArianeeSmartAsset");
+const ArianeeEvent = artifacts.require("ArianeeEvent");
+const Aria = artifacts.require("Aria");
+const ArianeeLost = artifacts.require("ArianeeLost");
+
 const STORE_ADDR = "0x0000000000000000000000000000000000000001";
 const SMART_ASSET_ADDR = "0x0000000000000000000000000000000000000001";
 const EVENT_ADDR = "0x0000000000000000000000000000000000000001";
 const ARIA_ADDR = "0x0000000000000000000000000000000000000001";
+const LOST_ADDR = "0x0000000000000000000000000000000000000001";
 
 const MERKLE_TREE_HEIGHT = 30;
 
-const { ethers } = require("ethers");
+const { ContractFactory, JsonRpcProvider } = require("ethers");
 
 async function deployPrivacy(deployer, network, accounts) {
   let forwarderAddress = FORWARDER_ADDR;
@@ -32,32 +40,85 @@ async function deployPrivacy(deployer, network, accounts) {
   }
   console.log("[DeployPrivacy] Forwarder address: ", forwarderAddress);
 
+  const arianeeStore = await ArianeeStore.deployed();
+  let arianeeStoreAddr = null;
+  if (!arianeeStore || !arianeeStore.address) {
+    console.warn(`WARNING: ArianeeStore deployment not found, using declared address ${STORE_ADDR}`);
+    arianeeStoreAddr = STORE_ADDR;
+  } else {
+    arianeeStoreAddr = arianeeStore.address;
+  }
+  const arianeeSmartAsset = await ArianeeSmartAsset.deployed();
+  let arianeeSmartAssetAddr = null;
+  if (!arianeeSmartAsset || !arianeeSmartAsset.address) {
+    console.warn(`WARNING: ArianeeSmartAsset deployment not found, using declared address ${SMART_ASSET_ADDR}`);
+    arianeeSmartAssetAddr = SMART_ASSET_ADDR;
+  } else {
+    arianeeSmartAssetAddr = arianeeSmartAsset.address;
+  }
+  const arianeeEvent = await ArianeeEvent.deployed();
+  let arianeeEventAddr = null;
+  if (!arianeeEvent || !arianeeEvent.address) {
+    console.warn(`WARNING: ArianeeEvent deployment not found, using declared address ${EVENT_ADDR}`);
+    arianeeEventAddr = EVENT_ADDR;
+  } else {
+    arianeeEventAddr = arianeeEvent.address;
+  }
+  const aria = await Aria.deployed();
+  let ariaAddr = null;
+  if (!aria || !aria.address) {
+    console.warn(`WARNING: Aria deployment not found, using declared address ${ARIA_ADDR}`);
+    ariaAddr = ARIA_ADDR;
+  } else {
+    ariaAddr = aria.address;
+  }
+  const arianeeLost = await ArianeeLost.deployed();
+  let arianeeLostAddr = null;
+  if (!arianeeLost || !arianeeLost.address) {
+    console.warn(`WARNING: ArianeeLost deployment not found, using declared address ${LOST_ADDR}`);
+    arianeeLostAddr = LOST_ADDR;
+  } else {
+    arianeeLostAddr = arianeeLost.address;
+  }
+
   // Can't find how to deploy bytecode using truffle, so we'll use ethers instead
   const host = deployer.provider.host;
   const deployerAddress = accounts[0];
-  const provider = new ethers.providers.JsonRpcProvider(host);
+  const provider = new JsonRpcProvider(host);
+  const signer = await provider.getSigner(deployerAddress);
 
-  const HasherFactory = new ethers.ContractFactory(HasherAbi, HasherBytecode, provider.getSigner(deployerAddress));
+  const HasherFactory = new ContractFactory(HasherAbi, HasherBytecode, signer);
   const hasher = await HasherFactory.deploy();
+  await hasher.waitForDeployment();
+  const hasherAddr = await hasher.getAddress();
 
-  const PoseidonFactory = new ethers.ContractFactory(PoseidonAbi, PoseidonBytecode, provider.getSigner(deployerAddress));
+  const PoseidonFactory = new ContractFactory(PoseidonAbi, PoseidonBytecode, signer);
   const poseidon = await PoseidonFactory.deploy();
+  await poseidon.waitForDeployment();
+  const poseidonAddr = await poseidon.getAddress();
 
   // Now we can go back to truffle
   // Copied this from the "deployProtocol" script: need to deploy as blank, otherwise it is not working with ganache cli
   await deployer.deploy(CreditVerifier);
 
-  const creditVerifier = await deployer.deploy(CreditVerifier);
-  const creditNotePool = await deployer.deploy(CreditNotePool, ARIA_ADDR, STORE_ADDR, creditVerifier.address, MERKLE_TREE_HEIGHT, hasher.address, FORWARDER_ADDR);
-
   const ownershipVerifier = await deployer.deploy(OwnershipVerifier);
-  const arianeeIssuerProxy = await deployer.deploy(ArianeeIssuerProxy, STORE_ADDR, SMART_ASSET_ADDR, EVENT_ADDR, ownershipVerifier.address, creditNotePool.address, poseidon.address, FORWARDER_ADDR);
+
+  const arianeeIssuerProxy = await deployer.deploy(ArianeeIssuerProxy, arianeeStoreAddr, arianeeSmartAssetAddr, arianeeEventAddr, arianeeLostAddr, ownershipVerifier.address, poseidonAddr, forwarderAddress);
+
+  const creditRegister = await deployer.deploy(CreditRegister);
+  const creditVerifier = await deployer.deploy(CreditVerifier);
+
+  const arianeeCreditNotePool = await deployer.deploy(ArianeeCreditNotePool, arianeeIssuerProxy.address, ariaAddr, arianeeStoreAddr, creditRegister.address, creditVerifier.address, MERKLE_TREE_HEIGHT, hasherAddr, poseidonAddr, forwarderAddress);
+
+  // Registering the first `ArianeeCreditNotePool` on the `ArianeeIssuerProxy`
+  await arianeeIssuerProxy.addCreditNotePool(arianeeCreditNotePool.address);
 
   const result = {
     contractAdresses: {
-      hasher: hasher.address,
+      hasher: hasherAddr,
+      creditRegister: creditRegister.address,
       creditVerifier: creditVerifier.address,
-      creditNotePool: creditNotePool.address,
+      arianeeCreditNotePool: arianeeCreditNotePool.address,
       ownershipVerifier: ownershipVerifier.address,
       arianeeIssuerProxy: arianeeIssuerProxy.address,
     }
