@@ -395,11 +395,25 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     arianeeLost.setStolenStatus(_tokenId);
   }
 
+  function unsetStolenStatus(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
+    arianeeLost.unsetStolenStatus(_tokenId);
+  }
+
   function setMissingStatus(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId
   ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     arianeeLost.setMissingStatus(_tokenId);
+  }
+
+  function unsetMissingStatus(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
+    arianeeLost.unsetMissingStatus(_tokenId);
   }
 
   // Emergency
