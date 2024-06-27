@@ -33,6 +33,7 @@ const CREDIT_TYPE_UPDATE = 3;
 contract('IssuerProxy', (accounts) => {
   let deployer;
   let relayer;
+  let nonCreditFreeRelayer;
 
   let interfaceProvider;
 
@@ -57,7 +58,8 @@ contract('IssuerProxy', (accounts) => {
     // console.log('[IssuerProxy] Forwarder address: ', forwarderAddress);
 
     deployer = accounts[0];
-    relayer = accounts[9];
+    relayer = accounts[8];
+    nonCreditFreeRelayer = accounts[9];
 
     // We use a random account for the interface provider
     // The ìnterfaceProvider` can't be ZeroAddress otherwise we'll get a revert when the store try to transfer the rewards
@@ -135,6 +137,8 @@ contract('IssuerProxy', (accounts) => {
     protocolV1 = new ProtocolClientV1(signer, protocolDetails, {});
   });
 
+  // Commitment and proof tests
+
   it(`should be able to reserve a token with a non-used commitment hash`, async () => {
     const tokenId = 123;
     const { commitmentHashAsStr } = await prover.issuerProxy.computeCommitmentHash({ protocolV1, tokenId });
@@ -163,8 +167,8 @@ contract('IssuerProxy', (accounts) => {
     const tokenId = 123;
 
     const fragment = 'hydrateToken';
-    // We don't need to provide the commitment hash as `tokenId=123` is already registered
     const creditNotePool = ZeroAddress;
+        // We don't need to provide the commitment hash as `tokenId=123` is already registered
     const commitmentHash = 0;
     const imprint = `0x${'00'.repeat(32)}`;
     const uri = 'https://example.com';
@@ -182,10 +186,42 @@ contract('IssuerProxy', (accounts) => {
     });
 
     await arianeeIssuerProxyInstance.hydrateToken(callData, DEFAULT_CREDIT_PROOF, creditNotePool, commitmentHash, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer });
+
+    const tokenImprint = await arianeeSmartAssetInstance.tokenImprint(tokenId, { from: relayer });
+    assert.equal(tokenImprint, imprint);
   });
 
-  // TODO: Try to reserve a token directly with the `hydrateToken` method
-  // https://linear.app/arianee/issue/ARI-982/[contract]-tests-for-creditnotepool-arianeeissuerproxy-without-proofs
+  it(`should be able to hydrate and reserve on-the-fly a token`, async () => {
+    const tokenId = 456;
+    const { commitmentHashAsStr } = await prover.issuerProxy.computeCommitmentHash({ protocolV1, tokenId });
+
+    const fragment = 'hydrateToken';
+    const creditNotePool = ZeroAddress;
+    // We need to provide the commitment hash as `tokenId=456` is not registered and will be reserved on-the-fly
+    const commitmentHash = commitmentHashAsStr;
+    const imprint = `0x${'00'.repeat(32)}`;
+    const uri = 'https://example.com';
+    const encryptedInitialKey = ZeroAddress;
+    const tokenRecoveryTimestamp = 0;
+    const initialKeyIsRequestKey = false;
+
+    const values = [creditNotePool, commitmentHash, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+    const { callData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
+    await arianeeIssuerProxyInstance.hydrateToken(callData, DEFAULT_CREDIT_PROOF, creditNotePool, commitmentHash, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer });
+
+    const ownerOf = await arianeeSmartAssetInstance.ownerOf(tokenId, { from: relayer });
+    assert.equal(ownerOf, arianeeIssuerProxyInstance.address);
+
+    const tokenImprint = await arianeeSmartAssetInstance.tokenImprint(tokenId, { from: relayer });
+    assert.equal(tokenImprint, imprint);
+  });
 
   it(`should be able to add a token access with a valid proof`, async () => {
     const tokenId = 123;
@@ -375,6 +411,97 @@ contract('IssuerProxy', (accounts) => {
       arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: relayer }),
       truffleAssert.ErrorType.REVERT,
       'ArianeePrivacyProxy: OwnershipProof verification failed'
+    );
+  });
+
+  // ICreditNotePool management tests
+
+  it(`shouldn't be able to create an event with a non whitelisted ICreditNotePool`, async () => {
+    const tokenId = 123;
+
+    const fragment = 'createEvent';
+    const creditNotePool = '0x0000000000000000000000000000000000000123';
+    const eventId = 1;
+    const imprint = `0x${'00'.repeat(32)}`;
+    const uri = 'https://example.com';
+
+    const values = [creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+    const { callData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
+    // INFO: The `nonCreditFreeRelayer` is not in the "credit free sender" whitelist, we use it intentionally to test the ICreditNotePool whitelist
+
+    await truffleAssert.fails(
+      arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: nonCreditFreeRelayer }),
+      truffleAssert.ErrorType.REVERT,
+      'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted'
+    );
+  });
+
+  it(`should be able to create an event with a whitelisted ICreditNotePool`, async () => {
+    // Add the ICreditNotePool to the whitelist
+    const creditNotePool = '0x0000000000000000000000000000000000000123';
+    await arianeeIssuerProxyInstance.addCreditNotePool(creditNotePool);
+
+    const tokenId = 123;
+
+    const fragment = 'createEvent';
+    const eventId = 1;
+    const imprint = `0x${'00'.repeat(32)}`;
+    const uri = 'https://example.com';
+
+    const values = [creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+    const { callData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
+    // We don't really wait for a successful event creation here, the transaction will revert because `0x0000000000000000000000000000000000000123` is not a real ICreditNotePool contract
+    // It's ok for us if the transaction revert with a classic "VM Exception while processing transaction: revert" error and not with the "ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted" error
+    await truffleAssert.fails(
+      arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: nonCreditFreeRelayer }),
+      truffleAssert.ErrorType.REVERT,
+      'VM Exception while processing transaction: revert'
+    );
+  });
+
+  // Credit free sender management tests
+
+  it(`shouldn't be able to create an event with a non whitelisted credit free sender`, async () => {
+    // At the beginning of the test file we added the relayer to the "credit free sender" whitelist
+    // So we already know that adding a credit free sender works if the previous tests passed
+    // We will now remove it from the credit free sender whitelist and try to create an event with it
+    await arianeeIssuerProxyInstance.removeCreditFreeSender(relayer, { from: deployer });
+
+    const tokenId = 123;
+
+    const fragment = 'createEvent';
+    const creditNotePool = '0x0000000000000000000000000000000000000456'; // Be sure to use a non whitelisted ICreditNotePool
+    const eventId = 1;
+    const imprint = `0x${'00'.repeat(32)}`;
+    const uri = 'https://example.com';
+
+    const values = [creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+    const { callData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
+    await truffleAssert.fails(
+      arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: relayer }),
+      truffleAssert.ErrorType.REVERT,
+      'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted'
     );
   });
 });
