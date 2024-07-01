@@ -169,7 +169,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     if (creditFreeSenders[_msgSender()] == true) {
       emit CreditFreeSenderLog(_msgSender(), _creditType);
     } else {
-      require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Credit note pool not allowed');
+      require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted');
       ICreditNotePool(_creditNotePool).spend(_creditNoteProof, _creditType);
     }
   }
