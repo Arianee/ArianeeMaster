@@ -35,7 +35,7 @@ interface IArianeeStore {
 
   function acceptEvent(uint256 _eventId, address _providerOwner) external;
 
-  function createMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint) external;
+  function createMessage(uint256 _messageId, uint256 _tokenId, bytes32 _imprint, address _providerBrand) external;
 
   function updateSmartAsset(uint256 _tokenId, bytes32 _imprint, address _providerBrand) external;
 
