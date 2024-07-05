@@ -380,10 +380,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     address _creditNotePool,
     uint256 _messageId,
     uint256 _tokenId,
-    bytes32 _imprint
+    bytes32 _imprint,
+    address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
     trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_MESSAGE, _creditNoteProof);
-    store.createMessage(_messageId, _tokenId, _imprint);
+    store.createMessage(_messageId, _tokenId, _imprint, _interfaceProvider);
   }
 
   // IArianeeLost
