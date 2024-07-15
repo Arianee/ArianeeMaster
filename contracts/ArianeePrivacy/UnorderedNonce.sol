@@ -6,7 +6,7 @@ import "@opengsn/contracts/src/ERC2771Recipient.sol";
 abstract contract UnorderedNonce {
   event UnorderedNonceInvalidation(uint256 indexed tokenId, uint256 word, uint256 mask);
 
-  /// @notice A map from tokenId and a caller specified word index to a bitmap. Used to set bits in the bitmap to prevent against signature replay protection
+  /// @notice A map from tokenId and a caller specified word index to a bitmap. Used to set bits in the bitmap to prevent against signature replay attacks
   /// @dev Uses unordered nonces so that permit messages do not need to be spent in a certain order
   /// @dev The mapping is indexed first by the tokenId, then by an index specified in the nonce
   /// @dev It returns a uint256 bitmap
@@ -37,7 +37,8 @@ abstract contract UnorderedNonce {
   /// @notice Checks whether a nonce is taken and sets the bit at the bit position in the bitmap at the word position
   /// @param tokenId The tokenId to use the nonce at
   /// @param nonce The nonce to spend
-  function _useUnorderedNonce(uint256 tokenId, uint256 nonce) internal returns (bool) {
+  /// @return used A boolean indicating whether the nonce was successfully used
+  function _useUnorderedNonce(uint256 tokenId, uint256 nonce) internal returns (bool used) {
     (uint256 wordPos, uint256 bitPos) = bitmapPositions(nonce);
     uint256 bit = 1 << bitPos;
     uint256 flipped = nonceBitmap[tokenId][wordPos] ^= bit;
