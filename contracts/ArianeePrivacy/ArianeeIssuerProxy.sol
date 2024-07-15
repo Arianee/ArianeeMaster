@@ -186,8 +186,9 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
       commitmentHashes[_tokenId] != 0,
       'ArianeeIssuerProxy: No commitment registered for this token'
     );
+    uint256 commitmentHash = commitmentHashes[_tokenId];
     delete commitmentHashes[_tokenId];
-    emit TokenCommitmentUnregistered(_tokenId, commitmentHashes[_tokenId]);
+    emit TokenCommitmentUnregistered(commitmentHash, _tokenId);
   }
 
   // CreditNoteProof
