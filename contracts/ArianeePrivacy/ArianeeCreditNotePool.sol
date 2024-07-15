@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@opengsn/contracts/src/ERC2771Recipient.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -33,7 +32,7 @@ interface ICreditVerifier {
     ) external view returns (bool);
 }
 
-contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistory, ERC2771Recipient {
+contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC2771Recipient {
     using ByteUtils for bytes;
     using SafeERC20 for IERC20;
 
@@ -257,15 +256,5 @@ contract ArianeeCreditNotePool is Ownable, ReentrancyGuard, MerkleTreeWithHistor
 
     function isSpent(bytes32 _nullifierHash) external view returns (bool) {
         return nullifierHashes[_nullifierHash];
-    }
-
-    // ERC2771Recipient
-
-    function _msgSender() internal view override(Context, ERC2771Recipient) returns (address ret) {
-        return ERC2771Recipient._msgSender();
-    }
-
-    function _msgData() internal view override(Context, ERC2771Recipient) returns (bytes calldata ret) {
-        ret = ERC2771Recipient._msgData();
     }
 }

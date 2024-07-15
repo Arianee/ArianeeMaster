@@ -3,7 +3,6 @@ pragma solidity 0.8.19;
 
 import '@opengsn/contracts/src/ERC2771Recipient.sol';
 import '@openzeppelin/contracts/access/Ownable2Step.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 import './UnorderedNonce.sol';
 import '../Utilities/ByteUtils.sol';
@@ -24,7 +23,7 @@ interface IOwnershipVerifier {
   ) external view returns (bool);
 }
 
-contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ERC2771Recipient {
+contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   using ByteUtils for bytes;
 
   uint256 public constant ZK_CREDIT_TYPE_CERTIFICATE = 1;
@@ -446,11 +445,5 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   function _msgData() internal view override(Context, ERC2771Recipient) returns (bytes calldata ret) {
     ret = ERC2771Recipient._msgData();
-  }
-
-  // Utilities
-
-  function isDefaultCreditNoteProof(CreditNoteProof memory _proof) public pure returns (bool) {
-    return _proof._pA[0] == 0 && _proof._pA[1] == 0 && _proof._pB[0][0] == 0 && _proof._pB[0][1] == 0 && _proof._pB[1][0] == 0 && _proof._pB[1][1] == 0 && _proof._pC[0] == 0 && _proof._pC[1] == 0 && _proof._pubSignals[0] == 0 && _proof._pubSignals[1] == 0 && _proof._pubSignals[2] == 0;
   }
 }
