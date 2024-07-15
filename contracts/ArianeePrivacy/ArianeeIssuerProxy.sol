@@ -27,10 +27,10 @@ interface IOwnershipVerifier {
 contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ERC2771Recipient {
   using ByteUtils for bytes;
 
-  uint256 public constant ZK_CREDIT_TYPE_CERTIFICATE = 1;
-  uint256 public constant ZK_CREDIT_TYPE_MESSAGE = 2;
-  uint256 public constant ZK_CREDIT_TYPE_EVENT = 3;
-  uint256 public constant ZK_CREDIT_TYPE_UPDATE = 4;
+  uint256 public constant CREDIT_TYPE_CERTIFICATE = 0;
+  uint256 public constant CREDIT_TYPE_MESSAGE = 1;
+  uint256 public constant CREDIT_TYPE_EVENT = 2;
+  uint256 public constant CREDIT_TYPE_UPDATE = 3;
 
   /**
    * @notice The OwnershipProof must be the first argument if used in a function
@@ -215,7 +215,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
       _verifyProof(_ownershipProof, true, _tokenId);
     }
 
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
 
     store.hydrateToken(
       _tokenId,
@@ -320,7 +320,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_UPDATE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_UPDATE, _creditNoteProof);
     store.updateSmartAsset(_tokenId, _imprint, _interfaceProvider);
   }
 
@@ -336,7 +336,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     string calldata _uri,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_EVENT, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_EVENT, _creditNoteProof);
     store.createEvent(_eventId, _tokenId, _imprint, _uri, _interfaceProvider);
   }
 
@@ -383,7 +383,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_MESSAGE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_MESSAGE, _creditNoteProof);
     store.createMessage(_messageId, _tokenId, _imprint, _interfaceProvider);
   }
 
