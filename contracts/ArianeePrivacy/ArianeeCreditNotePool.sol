@@ -165,7 +165,7 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         token.safeTransferFrom(_msgSender(), address(this), amount);
 
         // Approve the store to transfer the required amount of tokens
-        token.approve(address(store), amount);
+        require(token.approve(address(store), amount), 'ArianeeCreditNotePool: ERC20 approval failed');
         // Buy the credits from the store
         store.buyCredit(_creditType, MAX_NULLIFIER_PER_COMMITMENT, issuerProxy);
 
