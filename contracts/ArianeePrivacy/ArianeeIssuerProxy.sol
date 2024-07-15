@@ -49,24 +49,24 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   /**
    * @notice The ArianeeStore contract used to pass issuer intents
    */
-  IArianeeStore public store;
+  IArianeeStore public immutable store;
   /**
    * @notice The ArianeeSmartAsset contract used to pass issuer intents
    */
-  IArianeeSmartAsset public smartAsset;
+  IArianeeSmartAsset public immutable smartAsset;
   /**
    * @notice The ArianeeEvent contract used to pass issuer intents
    */
-  IArianeeEvent public arianeeEvent;
+  IArianeeEvent public immutable arianeeEvent;
   /**
    * @notice The ArianeeLost contract used to pass issuer intents
    */
-  IArianeeLost public arianeeLost;
+  IArianeeLost public immutable arianeeLost;
 
   /**
    * @notice The contract used to verify the ownership proofs
    */
-  IOwnershipVerifier public verifier;
+  IOwnershipVerifier public immutable verifier;
 
   /**
    * @notice The contract used to compute Poseidon hashes

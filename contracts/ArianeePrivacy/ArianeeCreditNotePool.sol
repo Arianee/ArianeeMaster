@@ -63,27 +63,27 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     /**
      * @notice The address of the ArianeeIssuerProxy contract (the only one allowed to interact with this contract)
      */
-    address public issuerProxy;
+    address public immutable issuerProxy;
 
     /**
      * @notice The ERC20 token used to purchase credits
      */
-    IERC20 public token;
+    IERC20 public immutable token;
 
     /**
      * @notice The ArianeeStore contract used to purchase credits
      */
-    IArianeeStore public store;
+    IArianeeStore public immutable store;
 
     /**
      * @notice The contract used to verify the `creditRegister` proofs
      */
-    ICreditRegister public creditRegister;
+    ICreditRegister public immutable creditRegister;
 
     /**
      * @notice The contract used to verify the `creditVerifier` proofs
      */
-    ICreditVerifier public creditVerifier;
+    ICreditVerifier public immutable creditVerifier;
 
     /**
      * @notice The contract used to compute Poseidon hashes
