@@ -139,7 +139,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     );
 
     uint256 pNonce = _ownershipProof._pubSignals[2];
-    require(_useUnorderedNonce(_tokenId, pNonce), 'ArianeePrivacyProxy: Proof nonce has already been used');
+    require(_useUnorderedNonce(pCommitmentHash, pNonce), 'ArianeePrivacyProxy: Proof nonce has already been used');
 
     require(
       verifier.verifyProof(_ownershipProof._pA, _ownershipProof._pB, _ownershipProof._pC, _ownershipProof._pubSignals),
@@ -233,10 +233,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   function invalidateUnorderedNonces(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId,
+    uint256 _commitmentHash,
     uint256 _wordPos,
     uint256 _mask
   ) external onlyWithProof(_ownershipProof, false, _tokenId) {
-    invalidateUnorderedNonces(_tokenId, _wordPos, _mask);
+    invalidateUnorderedNonces(_commitmentHash, _wordPos, _mask);
   }
 
   // IArianeeSmartAsset
