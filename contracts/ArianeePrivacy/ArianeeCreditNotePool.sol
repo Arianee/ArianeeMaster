@@ -101,12 +101,10 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
     /**
      * @notice Emitted when a credit note is purchased
-     * @dev The `creditType` is 0-indexed
      */
     event Purchased(uint256 creditType, bytes32 commitmentHash, uint32 indexed leafIndex, uint256 timestamp);
     /**
      * @notice Emitted when a credit note is spent
-     * @dev The `creditType` is 0-indexed
      */
     event Spent(uint256 creditType, bytes32 nullifierHash, uint256 timestamp);
 
@@ -140,29 +138,25 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     }
 
     /**
-     * @dev WARNING: The parameter `_zkCreditType` is the credit type that the user wants to purchase BUT it is 1-indexed.
-     * This is done on purpose for easier circuit implementation.
-     * Example: If the user wants to purchase a "certificate" credit (type 0), the `_zkCreditType` should be 1.
-     * @notice Emits a `Purchased` event when a credit note is successfully purchased (`creditType` is 0-indexed)
+     * @notice Emits a `Purchased` event when a credit note is successfully purchased
      */
-    function purchase(CreditRegistrationProof calldata _creditRegistrationProof, bytes32 _commitmentHash, uint256 _zkCreditType) external nonReentrant {
-        require(
-            _zkCreditType >= 1 && _zkCreditType <= 4,
-            'ArianeeCreditNotePool: The credit type should be either 1, 2, 3 or 4'
-        );
+    function purchase(
+        CreditRegistrationProof calldata _creditRegistrationProof,
+        bytes32 _commitmentHash,
+        uint256 _creditType
+    ) external nonReentrant {
+        require(_creditType <= 3, 'ArianeeCreditNotePool: The credit type should be either 0, 1, 2 or 3');
         require(
             !commitmentHashes[_commitmentHash],
             'ArianeeCreditNotePool: This commitment has already been registered'
         );
 
-        _verifyRegistrationProof(_creditRegistrationProof, _commitmentHash, _zkCreditType);
+        _verifyRegistrationProof(_creditRegistrationProof, _commitmentHash, _creditType);
 
         uint32 insertedIndex = _insert(_commitmentHash);
         commitmentHashes[_commitmentHash] = true;
 
-        // The credit type is 0-indexed in the store, but 1-indexed in the commitment
-        uint256 creditType = _zkCreditType - 1;
-        uint256 creditPrice = store.getCreditPrice(creditType);
+        uint256 creditPrice = store.getCreditPrice(_creditType);
 
         // One credit note is worth `MAX_NULLIFIER_PER_COMMITMENT` credits
         uint256 amount = MAX_NULLIFIER_PER_COMMITMENT * creditPrice;
@@ -173,15 +167,15 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         // Approve the store to transfer the required amount of tokens
         token.approve(address(store), amount);
         // Buy the credits from the store
-        store.buyCredit(creditType, MAX_NULLIFIER_PER_COMMITMENT, issuerProxy);
+        store.buyCredit(_creditType, MAX_NULLIFIER_PER_COMMITMENT, issuerProxy);
 
-        emit Purchased(creditType, _commitmentHash, insertedIndex, block.timestamp);
+        emit Purchased(_creditType, _commitmentHash, insertedIndex, block.timestamp);
     }
 
     function _verifyRegistrationProof(
         CreditRegistrationProof calldata _creditRegistrationProof,
         bytes32 _commitmentHash,
-        uint256 _zkCreditType
+        uint256 _creditType
     ) internal view {
         bytes32 pCommitmentHash = bytes32(_creditRegistrationProof._pubSignals[0]);
         require(
@@ -191,8 +185,8 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
         uint256 pCreditType = _creditRegistrationProof._pubSignals[1];
         require(
-            pCreditType == _zkCreditType,
-            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
+            pCreditType == _creditType,
+            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_creditType`'
         );
 
         require(
@@ -208,25 +202,24 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
     function spend(
         CreditNoteProof calldata _creditNoteProof,
-        uint256 _zkCreditType
+        uint256 _creditType
     ) public onlyIssuerProxy nonReentrant {
-        _verifyProof(_creditNoteProof, _zkCreditType);
+        _verifyProof(_creditNoteProof, _creditType);
 
         bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
         nullifierHashes[bytes32(_creditNoteProof._pubSignals[2])] = true;
 
-        uint256 creditType = _zkCreditType - 1;
-        emit Spent(creditType, pNullifierHash, block.timestamp);
+        emit Spent(_creditType, pNullifierHash, block.timestamp);
     }
 
-    function _verifyProof(CreditNoteProof calldata _creditNoteProof, uint256 _zkCreditType) internal view {
+    function _verifyProof(CreditNoteProof calldata _creditNoteProof, uint256 _creditType) internal view {
         bytes32 pRoot = bytes32(_creditNoteProof._pubSignals[0]);
         require(isKnownRoot(pRoot), 'ArianeeCreditNotePool: Cannot find your merkle root'); // Make sure to use a recent one
 
         uint256 pCreditType = _creditNoteProof._pubSignals[1];
         require(
-            pCreditType == _zkCreditType,
-            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
+            pCreditType == _creditType,
+            'ArianeeCreditNotePool: Proof credit type does not match the function argument `_creditType`'
         );
 
         bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
