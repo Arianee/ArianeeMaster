@@ -61,7 +61,7 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     uint256 public constant MAX_NULLIFIER_PER_COMMITMENT = 1000;
 
     /**
-     * @notice The address of the ArianeeIssuerProxy contract (the only one allowed to interact with this contract)
+     * @notice The address of the ArianeeIssuerProxy contract (the only one allowed to call the `spend` function of this contract)
      */
     address public immutable issuerProxy;
 
