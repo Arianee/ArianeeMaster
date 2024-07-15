@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import "@opengsn/contracts/src/ERC2771Recipient.sol";
-
 abstract contract UnorderedNonce {
   event UnorderedNonceInvalidation(uint256 indexed commitmentHash, uint256 word, uint256 mask);
 
