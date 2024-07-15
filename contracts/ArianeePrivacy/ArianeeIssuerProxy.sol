@@ -3,7 +3,6 @@ pragma solidity 0.8.19;
 
 import '@opengsn/contracts/src/ERC2771Recipient.sol';
 import '@openzeppelin/contracts/access/Ownable2Step.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
 import './UnorderedNonce.sol';
 import '../Utilities/ByteUtils.sol';
@@ -24,13 +23,13 @@ interface IOwnershipVerifier {
   ) external view returns (bool);
 }
 
-contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ERC2771Recipient {
+contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   using ByteUtils for bytes;
 
-  uint256 public constant ZK_CREDIT_TYPE_CERTIFICATE = 1;
-  uint256 public constant ZK_CREDIT_TYPE_MESSAGE = 2;
-  uint256 public constant ZK_CREDIT_TYPE_EVENT = 3;
-  uint256 public constant ZK_CREDIT_TYPE_UPDATE = 4;
+  uint256 public constant CREDIT_TYPE_CERTIFICATE = 0;
+  uint256 public constant CREDIT_TYPE_MESSAGE = 1;
+  uint256 public constant CREDIT_TYPE_EVENT = 2;
+  uint256 public constant CREDIT_TYPE_UPDATE = 3;
 
   /**
    * @notice The OwnershipProof must be the first argument if used in a function
@@ -139,7 +138,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     );
 
     uint256 pNonce = _ownershipProof._pubSignals[2];
-    require(_useUnorderedNonce(_tokenId, pNonce), 'ArianeePrivacyProxy: Proof nonce has already been used');
+    require(_useUnorderedNonce(pCommitmentHash, pNonce), 'ArianeePrivacyProxy: Proof nonce has already been used');
 
     require(
       verifier.verifyProof(_ownershipProof._pA, _ownershipProof._pB, _ownershipProof._pC, _ownershipProof._pubSignals),
@@ -215,7 +214,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
       _verifyProof(_ownershipProof, true, _tokenId);
     }
 
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
 
     store.hydrateToken(
       _tokenId,
@@ -233,10 +232,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
   function invalidateUnorderedNonces(
     OwnershipProof calldata _ownershipProof,
     uint256 _tokenId,
+    uint256 _commitmentHash,
     uint256 _wordPos,
     uint256 _mask
   ) external onlyWithProof(_ownershipProof, false, _tokenId) {
-    invalidateUnorderedNonces(_tokenId, _wordPos, _mask);
+    invalidateUnorderedNonces(_commitmentHash, _wordPos, _mask);
   }
 
   // IArianeeSmartAsset
@@ -320,7 +320,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_UPDATE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_UPDATE, _creditNoteProof);
     store.updateSmartAsset(_tokenId, _imprint, _interfaceProvider);
   }
 
@@ -336,7 +336,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     string calldata _uri,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_EVENT, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_EVENT, _creditNoteProof);
     store.createEvent(_eventId, _tokenId, _imprint, _uri, _interfaceProvider);
   }
 
@@ -383,7 +383,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
     bytes32 _imprint,
     address _interfaceProvider
   ) external onlyWithProof(_ownershipProof, true, _tokenId) {
-    trySpendCredit(_creditNotePool, ZK_CREDIT_TYPE_MESSAGE, _creditNoteProof);
+    trySpendCredit(_creditNotePool, CREDIT_TYPE_MESSAGE, _creditNoteProof);
     store.createMessage(_messageId, _tokenId, _imprint, _interfaceProvider);
   }
 
@@ -446,11 +446,5 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ReentrancyGuard, ER
 
   function _msgData() internal view override(Context, ERC2771Recipient) returns (bytes calldata ret) {
     ret = ERC2771Recipient._msgData();
-  }
-
-  // Utilities
-
-  function isDefaultCreditNoteProof(CreditNoteProof memory _proof) public pure returns (bool) {
-    return _proof._pA[0] == 0 && _proof._pA[1] == 0 && _proof._pB[0][0] == 0 && _proof._pB[0][1] == 0 && _proof._pB[1][0] == 0 && _proof._pB[1][1] == 0 && _proof._pC[0] == 0 && _proof._pC[1] == 0 && _proof._pubSignals[0] == 0 && _proof._pubSignals[1] == 0 && _proof._pubSignals[2] == 0;
   }
 }

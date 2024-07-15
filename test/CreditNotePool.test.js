@@ -25,14 +25,12 @@ const truffleAssert = require('truffle-assertions');
 // Because of this you can't run it along other tests files, they will fail
 // You can run it alone with `npm run test -- ./test/CreditNotePool.test.js`
 
-// NOTE: Credit type are 0-indexed in Arianee historical contracts but 1-indexed in the "Full Privacy" extension contracts
-// /!\ Bellow are the 1-indexed credit types /!\
-const ZK_CREDIT_TYPE_CERTIFICATE = 1;
-const ZK_CREDIT_TYPE_MESSAGE = 2;
-const ZK_CREDIT_TYPE_EVENT = 3;
-const ZK_CREDIT_TYPE_UPDATE = 4;
+const CREDIT_TYPE_CERTIFICATE = 0;
+const CREDIT_TYPE_MESSAGE = 1;
+const CREDIT_TYPE_EVENT = 2;
+const CREDIT_TYPE_UPDATE = 3;
 
-const ZK_CREDIT_TYPE_INVALID = 66;
+const CREDIT_TYPE_INVALID = 66;
 
 contract('CreditNotePool', (accounts) => {
   let deployer;
@@ -124,7 +122,7 @@ contract('CreditNotePool', (accounts) => {
     };
 
     const proverCore = Core.fromRandom();
-    prover = new Prover({ core: proverCore, useCreditNotePool: true });
+    prover = new Prover({ core: proverCore, circuitsBuildPath: 'node_modules/@arianee/privacy-circuits/build', useCreditNotePool: true });
     await prover.init();
 
     const provider = new JsonRpcProvider('http://localhost:8545');
@@ -134,30 +132,29 @@ contract('CreditNotePool', (accounts) => {
   });
 
   it(`should be able to buy some certificate credits`, async () => {
-    const zkCreditType = ZK_CREDIT_TYPE_CERTIFICATE;
-    const { commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_CERTIFICATE;
+    const { commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer });
 
     const isRegistered = await arianeeCreditNotePoolInstance.commitmentHashes(commitmentHashAsHex, { from: relayer });
     assert.equal(isRegistered, true);
 
     const issuerProxy = arianeeIssuerProxyInstance.address;
-    const creditType = zkCreditType - 1;
     const balanceOfCredit = await creditHistoryInstance.balanceOf(issuerProxy, creditType);
     assert.equal(balanceOfCredit.toString(), MaxNullifierPerCommitment.toString());
   });
 
   it(`shouldn't be able to buy credit with an already registered commitment`, async () => {
-    const zkCreditType = ZK_CREDIT_TYPE_EVENT;
-    const { commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_EVENT;
+    const { commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer });
 
     await truffleAssert.fails(
-      arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, zkCreditType, { from: relayer }),
+      arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer }),
       truffleAssert.ErrorType.REVERT,
       'ArianeeCreditNotePool: This commitment has already been registered'
     );
@@ -165,11 +162,11 @@ contract('CreditNotePool', (accounts) => {
 
   it(`should be able to spend a credit proof`, async () => {
     // Buy some certificate credits
-    const zkCreditType = ZK_CREDIT_TYPE_CERTIFICATE;
-    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_CERTIFICATE;
+    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHashAsHex, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHashAsHex, creditType, { from: relayer });
 
     // Prepare the commitment hash for the token
     const tokenId = 123;
@@ -181,7 +178,7 @@ contract('CreditNotePool', (accounts) => {
       nullifier,
       nullifierDerivationIndex: BigInt(1),
       secret,
-      zkCreditType,
+      creditType,
       performValidation: false,
     });
 
@@ -201,11 +198,11 @@ contract('CreditNotePool', (accounts) => {
 
   it(`shouldn't be able to spend a credit proof with the same nullifierDerivationIndex twice`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_UPDATE;
-    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_UPDATE;
+    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
 
     // Get a credit proof
     const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
@@ -213,7 +210,7 @@ contract('CreditNotePool', (accounts) => {
       nullifier,
       nullifierDerivationIndex: BigInt(1),
       secret,
-      zkCreditType,
+      creditType,
       performValidation: false,
     });
 
@@ -253,11 +250,11 @@ contract('CreditNotePool', (accounts) => {
 
   it(`shouldn't be able to spend a credit proof with a non-matching expected credit type`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_MESSAGE;
-    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_MESSAGE;
+    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
 
     // Get a credit proof
     const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
@@ -265,7 +262,7 @@ contract('CreditNotePool', (accounts) => {
       nullifier,
       nullifierDerivationIndex: BigInt(1),
       secret,
-      zkCreditType,
+      creditType,
       performValidation: false,
     });
 
@@ -289,30 +286,30 @@ contract('CreditNotePool', (accounts) => {
     await truffleAssert.fails(
       arianeeIssuerProxyInstance.updateSmartAsset(ownershipProofCallData, creditProofCallData, creditNotePool, tokenId, imprint, interfaceProvider, { from: relayer }),
       truffleAssert.ErrorType.REVERT,
-      'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
+      'ArianeeCreditNotePool: Proof credit type does not match the function argument `_creditType`'
     );
   });
 
   it(`shouldn't be able to purchase a credit proof with a non-matching credit type`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_UPDATE;
-    const { commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_UPDATE;
+    const { commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
     await truffleAssert.fails(
-      arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, ZK_CREDIT_TYPE_CERTIFICATE, { from: relayer }), // Pass the wrong credit type here
+      arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, CREDIT_TYPE_CERTIFICATE, { from: relayer }), // Pass the wrong credit type here
       truffleAssert.ErrorType.REVERT,
-      'ArianeeCreditNotePool: Proof credit type does not match the function argument `_zkCreditType`'
+      'ArianeeCreditNotePool: Proof credit type does not match the function argument `_creditType`'
     );
   });
 
   it(`shouldn't be able to spend an invalid credit proof (invalid callData)`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_UPDATE;
-    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_UPDATE;
+    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHash, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
 
     // Get a credit proof
     const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
@@ -320,7 +317,7 @@ contract('CreditNotePool', (accounts) => {
       nullifier,
       nullifierDerivationIndex: BigInt(1),
       secret,
-      zkCreditType,
+      creditType,
       performValidation: false,
     });
 
@@ -352,11 +349,11 @@ contract('CreditNotePool', (accounts) => {
   });
 
   it(`shouldn't be able to generate a credit registration proof with an invalid credit type`, async () => {
-    const zkCreditType = ZK_CREDIT_TYPE_INVALID;
+    const creditType = CREDIT_TYPE_INVALID;
 
     let computeCommitmentHashErr = null;
     try {
-      await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType, withRegistrationProof: true });
+      await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType, withRegistrationProof: true });
     } catch (err) {
       computeCommitmentHashErr = err;
     }
@@ -366,11 +363,11 @@ contract('CreditNotePool', (accounts) => {
 
   it(`shouldn't be able to generate a credit proof with nullifierDerivationIndex < 1`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_UPDATE;
-    const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_UPDATE;
+    const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer });
 
     let generateProofErr = null;
     try {
@@ -379,7 +376,7 @@ contract('CreditNotePool', (accounts) => {
         nullifier,
         nullifierDerivationIndex: BigInt(0),
         secret,
-        zkCreditType,
+        creditType,
         performValidation: false,
       });
     } catch (err) {
@@ -391,11 +388,11 @@ contract('CreditNotePool', (accounts) => {
 
   it(`shouldn't be able to generate a credit proof with nullifierDerivationIndex > 1000`, async () => {
     // Buy some update credits
-    const zkCreditType = ZK_CREDIT_TYPE_UPDATE;
-    const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, zkCreditType });
+    const creditType = CREDIT_TYPE_UPDATE;
+    const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
     const { callData: registrationProofCallData } = registrationProofResult;
 
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, zkCreditType, { from: relayer });
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer });
 
     let generateProofErr = null;
     try {
@@ -404,7 +401,7 @@ contract('CreditNotePool', (accounts) => {
         nullifier,
         nullifierDerivationIndex: BigInt(1001),
         secret,
-        zkCreditType,
+        creditType,
         performValidation: false,
       });
     } catch (err) {

@@ -23,8 +23,6 @@ const truffleAssert = require('truffle-assertions');
 // Because of this you can't run it along other tests files, they will fail
 // You can run it alone with `npm run test -- ./test/IssuerProxy.test.js`
 
-// NOTE: Credit type are 0-indexed in Arianee historical contracts but 1-indexed in the "Full Privacy" extension contracts
-// /!\ Bellow are the 0-indexed credit types /!\
 const CREDIT_TYPE_CERTIFICATE = 0;
 const CREDIT_TYPE_MESSAGE = 1;
 const CREDIT_TYPE_EVENT = 2;
@@ -128,7 +126,7 @@ contract('IssuerProxy', (accounts) => {
     };
 
     const proverCore = Core.fromRandom();
-    prover = new Prover({ core: proverCore, useCreditNotePool: false });
+    prover = new Prover({ core: proverCore, circuitsBuildPath: 'node_modules/@arianee/privacy-circuits/build', useCreditNotePool: false });
     await prover.init();
 
     const provider = new JsonRpcProvider('http://localhost:8545');
