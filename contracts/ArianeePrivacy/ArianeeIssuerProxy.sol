@@ -90,7 +90,33 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   /**
    * @notice Emitted when a "credit free sender" is sending an intent
    */
-  event CreditFreeSenderLog(address sender, uint256 creditType);
+  event CreditFreeSenderLog(address indexed sender, uint256 creditType);
+  /**
+   * @notice Emitted when a "credit free sender" is added
+   */
+  event CreditFreeSenderAdded(address indexed sender);
+  /**
+   * @notice Emitted when a "credit free sender" is removed
+   */
+  event CreditFreeSenderRemoved(address indexed sender);
+
+  /**
+   * @notice Emitted when a CreditNotePool is added
+   */
+  event CreditNotePoolAdded(address indexed creditNotePool);
+
+  /**
+   * @notice Emitted when a token commitment is registered
+   */
+  event TokenCommitmentRegistered(uint256 indexed commitmentHash, uint256 indexed tokenId);
+  /**
+   * @notice Emitted when a token commitment is updated
+   */
+  event TokenCommitmentUpdated(uint256 indexed previousCommitmentHash, uint256 indexed newCommitmentHash, uint256 indexed tokenId);
+  /**
+   * @notice Emitted when a token commitment is unregistered
+   */
+  event TokenCommitmentUnregistered(uint256 indexed commitmentHash, uint256 indexed tokenId);
 
   constructor(
     address _store,
@@ -152,6 +178,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
       'ArianeeIssuerProxy: A commitment has already been registered for this token'
     );
     commitmentHashes[_tokenId] = _commitmentHash;
+    emit TokenCommitmentRegistered(_commitmentHash, _tokenId);
   }
 
   function tryUnregisterCommitment(uint256 _tokenId) internal {
@@ -160,6 +187,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
       'ArianeeIssuerProxy: No commitment registered for this token'
     );
     delete commitmentHashes[_tokenId];
+    emit TokenCommitmentUnregistered(_tokenId, commitmentHashes[_tokenId]);
   }
 
   // CreditNoteProof
@@ -175,14 +203,17 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
 
   function addCreditNotePool(address _creditNotePool) external onlyOwner {
     creditNotePools[_creditNotePool] = true;
+    emit CreditNotePoolAdded(_creditNotePool);
   }
 
   function addCreditFreeSender(address _sender) external onlyOwner {
     creditFreeSenders[_sender] = true;
+    emit CreditFreeSenderAdded(_sender);
   }
 
   function removeCreditFreeSender(address _sender) external onlyOwner {
     delete creditFreeSenders[_sender];
+    emit CreditFreeSenderRemoved(_sender);
   }
 
   // IArianeeStore (IArianeeSmartAsset related functions)
@@ -424,7 +455,9 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
       commitmentHashes[_tokenId] != 0,
       'ArianeeIssuerProxy: No commitment registered for this token'
     );
+    uint256 previousCommitmentHash = commitmentHashes[_tokenId];
     commitmentHashes[_tokenId] = _newCommitmentHash;
+    emit TokenCommitmentUpdated(previousCommitmentHash, _newCommitmentHash, _tokenId);
   }
 
   function updateCommitmentBatch(OwnershipProof[] calldata _ownershipProofs, uint256[] calldata _tokenIds, uint256[] calldata _newCommitmentHashes) external onlyOwner {
