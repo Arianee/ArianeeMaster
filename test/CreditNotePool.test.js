@@ -172,17 +172,8 @@ contract('CreditNotePool', (accounts) => {
     const tokenId = 123;
     const { commitmentHashAsStr: ownershipCommitmentHashAsStr } = await prover.issuerProxy.computeCommitmentHash({ protocolV1, tokenId });
 
-    // Get a credit proof
-    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
-      protocolV1,
-      nullifier,
-      nullifierDerivationIndex: BigInt(1),
-      secret,
-      creditType,
-      performValidation: false,
-    });
-
-    // Reserve and hydrate the token
+    // Prepare the intent hash
+    const fragment = 'hydrateToken';
     const creditNotePool = arianeeCreditNotePoolInstance.address;
     const imprint = `0x${'11'.repeat(32)}`;
     const uri = 'https://example.com';
@@ -190,10 +181,72 @@ contract('CreditNotePool', (accounts) => {
     const tokenRecoveryTimestamp = 0;
     const initialKeyIsRequestKey = false;
 
+    const values = [creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+
+    // Get a credit proof
+    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
+      protocolV1,
+      nullifier,
+      nullifierDerivationIndex: BigInt(1),
+      secret,
+      creditType,
+      intentHashAsStr,
+      performValidation: false,
+    });
+
+    // Reserve and hydrate the token
     await arianeeIssuerProxyInstance.hydrateToken(DEFAULT_OWNERSHIP_PROOF, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer });
 
     const tokenImprint = await arianeeSmartAssetInstance.tokenImprint(tokenId);
     assert.equal(tokenImprint, imprint);
+  });
+
+  it(`shouldn't be able to spend a credit proof with an invalid intent hash`, async () => {
+    // Buy some certificate credits
+    const creditType = CREDIT_TYPE_CERTIFICATE;
+    const { nullifier, secret, commitmentHashAsHex: creditNotePoolCommitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
+    const { callData: registrationProofCallData } = registrationProofResult;
+
+    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHashAsHex, creditType, { from: relayer });
+
+    // Prepare the commitment hash for the token
+    const tokenId = 999;
+    const { commitmentHashAsStr: ownershipCommitmentHashAsStr } = await prover.issuerProxy.computeCommitmentHash({ protocolV1, tokenId });
+
+    // Prepare the intent hash
+    const fragment = 'hydrateToken';
+    const creditNotePool = arianeeCreditNotePoolInstance.address;
+    const nonMatchingImprint = `0x${'00'.repeat(32)}`;
+    const uri = 'https://example.com';
+    const encryptedInitialKey = ZeroAddress;
+    const tokenRecoveryTimestamp = 0;
+    const initialKeyIsRequestKey = false;
+
+    const values = [creditNotePool, ownershipCommitmentHashAsStr, tokenId, nonMatchingImprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider];
+
+    const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
+
+    // Get a credit proof
+    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
+      protocolV1,
+      nullifier,
+      nullifierDerivationIndex: BigInt(1),
+      secret,
+      creditType,
+      intentHashAsStr,
+      performValidation: false,
+    });
+
+    // Try to reserve and hydrate the token
+    const imprint = `0x${'11'.repeat(32)}`;
+
+    await truffleAssert.fails(
+      arianeeIssuerProxyInstance.hydrateToken(DEFAULT_OWNERSHIP_PROOF, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer }),
+      truffleAssert.ErrorType.REVERT,
+      'ArianeeCreditNotePool: Proof intent does not match the function call'
+    );
   });
 
   it(`shouldn't be able to spend a credit proof with the same nullifierDerivationIndex twice`, async () => {
@@ -203,16 +256,6 @@ contract('CreditNotePool', (accounts) => {
     const { callData: registrationProofCallData } = registrationProofResult;
 
     await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
-
-    // Get a credit proof
-    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
-      protocolV1,
-      nullifier,
-      nullifierDerivationIndex: BigInt(1),
-      secret,
-      creditType,
-      performValidation: false,
-    });
 
     // Get an ownership proof
     const tokenId = 123;
@@ -228,6 +271,17 @@ contract('CreditNotePool', (accounts) => {
       protocolV1,
       tokenId,
       intentHashAsStr,
+    });
+
+    // Get a credit proof
+    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
+      protocolV1,
+      nullifier,
+      nullifierDerivationIndex: BigInt(1),
+      secret,
+      creditType,
+      intentHashAsStr,
+      performValidation: false,
     });
 
     // Update the token
@@ -256,16 +310,6 @@ contract('CreditNotePool', (accounts) => {
 
     await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
 
-    // Get a credit proof
-    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
-      protocolV1,
-      nullifier,
-      nullifierDerivationIndex: BigInt(1),
-      secret,
-      creditType,
-      performValidation: false,
-    });
-
     // Get an ownership proof
     const tokenId = 123;
 
@@ -280,6 +324,17 @@ contract('CreditNotePool', (accounts) => {
       protocolV1,
       tokenId,
       intentHashAsStr,
+    });
+
+    // Get a credit proof
+    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
+      protocolV1,
+      nullifier,
+      nullifierDerivationIndex: BigInt(1),
+      secret,
+      creditType,
+      intentHashAsStr,
+      performValidation: false,
     });
 
     // Update the token
@@ -311,19 +366,6 @@ contract('CreditNotePool', (accounts) => {
 
     await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, creditNotePoolCommitmentHash, creditType, { from: relayer });
 
-    // Get a credit proof
-    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
-      protocolV1,
-      nullifier,
-      nullifierDerivationIndex: BigInt(1),
-      secret,
-      creditType,
-      performValidation: false,
-    });
-
-    // We temper the callData
-    creditProofCallData[0][0] = creditProofCallData[0][0].slice(0, -3) + '123';
-
     // Get an ownership proof
     const tokenId = 123;
 
@@ -339,6 +381,20 @@ contract('CreditNotePool', (accounts) => {
       tokenId,
       intentHashAsStr,
     });
+
+    // Get a credit proof
+    const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
+      protocolV1,
+      nullifier,
+      nullifierDerivationIndex: BigInt(1),
+      secret,
+      creditType,
+      intentHashAsStr,
+      performValidation: false,
+    });
+
+    // We temper the callData
+    creditProofCallData[0][0] = creditProofCallData[0][0].slice(0, -3) + '123';
 
     // Update the token
     await truffleAssert.fails(
@@ -377,6 +433,7 @@ contract('CreditNotePool', (accounts) => {
         nullifierDerivationIndex: BigInt(0),
         secret,
         creditType,
+        intentHashAsStr: '',
         performValidation: false,
       });
     } catch (err) {
@@ -402,6 +459,7 @@ contract('CreditNotePool', (accounts) => {
         nullifierDerivationIndex: BigInt(1001),
         secret,
         creditType,
+        intentHashAsStr: '',
         performValidation: false,
       });
     } catch (err) {

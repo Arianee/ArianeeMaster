@@ -28,7 +28,7 @@ interface ICreditVerifier {
         uint[2] calldata _pA,
         uint[2][2] calldata _pB,
         uint[2] calldata _pC,
-        uint[3] calldata _pubSignals
+        uint[4] calldata _pubSignals
     ) external view returns (bool);
 }
 
@@ -51,12 +51,12 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         uint[2] _pA; // 64 bytes
         uint[2][2] _pB; // 128 bytes
         uint[2] _pC; // 64 bytes
-        uint[3] _pubSignals; // 96 bytes
-    } // Total: 352 bytes
+        uint[4] _pubSignals; // 128 bytes
+    } // Total: 384 bytes
 
     uint256 public constant SELECTOR_SIZE = 4;
     uint256 public constant OWNERSHIP_PROOF_SIZE = 352;
-    uint256 public constant CREDIT_NOTE_PROOF_SIZE = 352;
+    uint256 public constant CREDIT_NOTE_PROOF_SIZE = 384;
 
     uint256 public constant MAX_NULLIFIER_PER_COMMITMENT = 1000;
 
@@ -202,9 +202,10 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
     function spend(
         CreditNoteProof calldata _creditNoteProof,
+        bytes calldata _intentMsgData,
         uint256 _creditType
     ) public onlyIssuerProxy nonReentrant {
-        _verifyProof(_creditNoteProof, _creditType);
+        _verifyProof(_creditNoteProof, _intentMsgData, _creditType);
 
         bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
         nullifierHashes[bytes32(_creditNoteProof._pubSignals[2])] = true;
@@ -212,7 +213,7 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         emit Spent(_creditType, pNullifierHash, block.timestamp);
     }
 
-    function _verifyProof(CreditNoteProof calldata _creditNoteProof, uint256 _creditType) internal view {
+    function _verifyProof(CreditNoteProof calldata _creditNoteProof, bytes calldata _intentMsgData, uint256 _creditType) internal view {
         bytes32 pRoot = bytes32(_creditNoteProof._pubSignals[0]);
         require(isKnownRoot(pRoot), 'ArianeeCreditNotePool: Cannot find your merkle root'); // Make sure to use a recent one
 
@@ -225,8 +226,14 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         bytes32 pNullifierHash = bytes32(_creditNoteProof._pubSignals[2]);
         require(!nullifierHashes[pNullifierHash], 'ArianeeCreditNotePool: This note has already been spent');
 
-        // We don't check the intent hash in the `ArianeeCreditNotePool` contract because it is already checked in the `ArianeeIssuerProxy` contract
-        // and the `ArianeeIssuerProxy` contract is the only one allowed to call the `spend` function.
+        uint256 pIntentHash = _creditNoteProof._pubSignals[3];
+
+        // Removing the `OwnershipProof` (352 bytes) and the `CreditNoteProof` (384 bytes) from the msg.data before computing the hash to compare
+        uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(_intentMsgData.slice(0, SELECTOR_SIZE), _intentMsgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + CREDIT_NOTE_PROOF_SIZE, _intentMsgData.length))))]));
+        require(
+            pIntentHash == msgDataHash,
+            'ArianeeCreditNotePool: Proof intent does not match the function call'
+        );
 
         require(
             creditVerifier.verifyProof(

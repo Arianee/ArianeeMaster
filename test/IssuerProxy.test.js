@@ -412,9 +412,9 @@ contract('IssuerProxy', (accounts) => {
     );
   });
 
-  // ICreditNotePool management tests
+  // IArianeeCreditNotePool management tests
 
-  it(`shouldn't be able to create an event with a non whitelisted ICreditNotePool`, async () => {
+  it(`shouldn't be able to create an event with a non whitelisted IArianeeCreditNotePool`, async () => {
     const tokenId = 123;
 
     const fragment = 'createEvent';
@@ -432,17 +432,17 @@ contract('IssuerProxy', (accounts) => {
       intentHashAsStr,
     });
 
-    // INFO: The `nonCreditFreeRelayer` is not in the "credit free sender" whitelist, we use it intentionally to test the ICreditNotePool whitelist
+    // INFO: The `nonCreditFreeRelayer` is not in the "credit free sender" whitelist, we use it intentionally to test the IArianeeCreditNotePool whitelist
 
     await truffleAssert.fails(
       arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: nonCreditFreeRelayer }),
       truffleAssert.ErrorType.REVERT,
-      'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted'
+      'ArianeeIssuerProxy: Target IArianeeCreditNotePool is not whitelisted'
     );
   });
 
-  it(`should be able to create an event with a whitelisted ICreditNotePool`, async () => {
-    // Add the ICreditNotePool to the whitelist
+  it(`should be able to create an event with a whitelisted IArianeeCreditNotePool`, async () => {
+    // Add the IArianeeCreditNotePool to the whitelist
     const creditNotePool = '0x0000000000000000000000000000000000000123';
     await arianeeIssuerProxyInstance.addCreditNotePool(creditNotePool);
 
@@ -462,8 +462,8 @@ contract('IssuerProxy', (accounts) => {
       intentHashAsStr,
     });
 
-    // We don't really wait for a successful event creation here, the transaction will revert because `0x0000000000000000000000000000000000000123` is not a real ICreditNotePool contract
-    // It's ok for us if the transaction revert with a classic "VM Exception while processing transaction: revert" error and not with the "ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted" error
+    // We don't really wait for a successful event creation here, the transaction will revert because `0x0000000000000000000000000000000000000123` is not a real IArianeeCreditNotePool contract
+    // It's ok for us if the transaction revert with a classic "VM Exception while processing transaction: revert" error and not with the "ArianeeIssuerProxy: Target IArianeeCreditNotePool is not whitelisted" error
     await truffleAssert.fails(
       arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: nonCreditFreeRelayer }),
       truffleAssert.ErrorType.REVERT,
@@ -482,7 +482,7 @@ contract('IssuerProxy', (accounts) => {
     const tokenId = 123;
 
     const fragment = 'createEvent';
-    const creditNotePool = '0x0000000000000000000000000000000000000456'; // Be sure to use a non whitelisted ICreditNotePool
+    const creditNotePool = '0x0000000000000000000000000000000000000456'; // Be sure to use a non whitelisted IArianeeCreditNotePool
     const eventId = 1;
     const imprint = `0x${'00'.repeat(32)}`;
     const uri = 'https://example.com';
@@ -499,7 +499,7 @@ contract('IssuerProxy', (accounts) => {
     await truffleAssert.fails(
       arianeeIssuerProxyInstance.createEvent(callData, DEFAULT_CREDIT_PROOF, creditNotePool, tokenId, eventId, imprint, uri, interfaceProvider, { from: relayer }),
       truffleAssert.ErrorType.REVERT,
-      'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted'
+      'ArianeeIssuerProxy: Target IArianeeCreditNotePool is not whitelisted'
     );
   });
 });
