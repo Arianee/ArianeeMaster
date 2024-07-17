@@ -44,7 +44,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
 
   uint256 public constant SELECTOR_SIZE = 4;
   uint256 public constant OWNERSHIP_PROOF_SIZE = 352;
-  uint256 public constant CREDIT_NOTE_PROOF_SIZE = 352;
+  uint256 public constant CREDIT_NOTE_PROOF_SIZE = 384;
 
   /**
    * @notice The ArianeeStore contract used to pass issuer intents
@@ -156,7 +156,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     uint256 pIntentHash = _ownershipProof._pubSignals[1];
     bytes memory msgData = _msgData();
 
-    // Removing the `OwnershipProof` (352 bytes) and if needed the `CreditNoteProof` (352 bytes) from the msg.data before computing the hash to compare
+    // Removing the `OwnershipProof` (352 bytes) and if needed the `CreditNoteProof` (384 bytes) from the msg.data before computing the hash to compare
     uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(msgData.slice(0, SELECTOR_SIZE), msgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + (needsCreditNoteProof ? CREDIT_NOTE_PROOF_SIZE : 0), msgData.length))))]));
     require(
       pIntentHash == msgDataHash,
@@ -197,8 +197,8 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     if (creditFreeSenders[_msgSender()] == true) {
       emit CreditFreeSenderLog(_msgSender(), _creditType);
     } else {
-      require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Target ICreditNotePool is not whitelisted');
-      ICreditNotePool(_creditNotePool).spend(_creditNoteProof, _creditType);
+      require(creditNotePools[_creditNotePool] == true, 'ArianeeIssuerProxy: Target IArianeeCreditNotePool is not whitelisted');
+      IArianeeCreditNotePool(_creditNotePool).spend(_creditNoteProof, _msgData(), _creditType);
     }
   }
 
