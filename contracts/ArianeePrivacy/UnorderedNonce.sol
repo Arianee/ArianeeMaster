@@ -16,6 +16,7 @@ abstract contract UnorderedNonce {
   /// @param wordPos A number to index the nonceBitmap at
   /// @param mask A bitmap masked against commitmentHash's current bitmap at the word position
   function invalidateUnorderedNonces(uint256 commitmentHash, uint256 wordPos, uint256 mask) internal {
+    require(wordPos <= type(uint248).max, "UnorderedNonce: `wordPos` too large");
     nonceBitmap[commitmentHash][wordPos] |= mask;
 
     emit UnorderedNonceInvalidation(commitmentHash, wordPos, mask);
