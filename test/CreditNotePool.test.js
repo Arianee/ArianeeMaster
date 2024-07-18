@@ -417,7 +417,7 @@ contract('CreditNotePool', (accounts) => {
     assert.equal(computeCommitmentHashErr.message.match(/Error in template CreditRegister/)?.length, 1);
   });
 
-  it(`shouldn't be able to generate a credit proof with nullifierDerivationIndex < 1`, async () => {
+  it(`shouldn't be able to generate a credit proof with nullifierDerivationIndex > 999`, async () => {
     // Buy some update credits
     const creditType = CREDIT_TYPE_UPDATE;
     const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
@@ -430,33 +430,7 @@ contract('CreditNotePool', (accounts) => {
       await prover.creditNotePool.generateProof({
         protocolV1,
         nullifier,
-        nullifierDerivationIndex: BigInt(0),
-        secret,
-        creditType,
-        intentHashAsStr: '',
-        performValidation: false,
-      });
-    } catch (err) {
-      generateProofErr = err;
-    }
-
-    assert.equal(generateProofErr.message.match(/Error in template CreditVerifier/)?.length, 1);
-  });
-
-  it(`shouldn't be able to generate a credit proof with nullifierDerivationIndex > 1000`, async () => {
-    // Buy some update credits
-    const creditType = CREDIT_TYPE_UPDATE;
-    const { nullifier, secret, commitmentHashAsHex, registrationProofResult } = await prover.creditNotePool.computeCommitmentHash({ protocolV1, creditType });
-    const { callData: registrationProofCallData } = registrationProofResult;
-
-    await arianeeCreditNotePoolInstance.purchase(registrationProofCallData, commitmentHashAsHex, creditType, { from: relayer });
-
-    let generateProofErr = null;
-    try {
-      await prover.creditNotePool.generateProof({
-        protocolV1,
-        nullifier,
-        nullifierDerivationIndex: BigInt(1001),
+        nullifierDerivationIndex: BigInt(1000),
         secret,
         creditType,
         intentHashAsStr: '',
