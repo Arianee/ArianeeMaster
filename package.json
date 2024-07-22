@@ -6,7 +6,7 @@
   "scripts": {
     "ganache": "ganache-cli -d -e 100 -p 8545 -l 8000000 --chain.chainId 5577 --logging.debug",
     "ganache:deploy": "truffle deploy --network test",
-    "gsn:start": "npx gsn start",
+    "gsn": "npx gsn start",
     "symlink": "node createSymlink.js",
     "lint": "eslint './**/*.js?(x)'",
     "clean": "rm -r build/",
