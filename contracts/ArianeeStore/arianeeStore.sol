@@ -11,6 +11,7 @@ import "../Interfaces/IArianeeCreditHistory.sol";
 import "../Interfaces/IArianeeEvent.sol";
 import "../Interfaces/IArianeeMessage.sol";
 import "../Interfaces/IArianeeUpdate.sol";
+import "../Interfaces/IRewardsHistory.sol";
 
 /// @title Contract managing the Arianee economy.
 contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
@@ -23,6 +24,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     IArianeeEvent public arianeeEvent;
     IArianeeMessage public arianeeMessage;
     IArianeeUpdate public arianeeUpdate;
+    IRewardsHistory public rewardsHistory;
 
     function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
         return ERC2771Recipient._msgSender();
@@ -90,11 +92,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      */
     mapping (uint256 => address) tokenToWalletProvider;
 
-    /**
-     * @dev Mapping from token id to rewards.
-     */
-    mapping(uint256 => uint256) internal rewards;
-
+    
     /**
      * @dev This emits when a new address is set.
      */
@@ -137,6 +135,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         address _arianeeEvent,
         address _arianeeMessage,
         address _arianeeUpdate,
+        address _rewardsHistory,
         uint256 _ariaUSDExchange,
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
@@ -150,6 +149,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         arianeeEvent = IArianeeEvent(address(_arianeeEvent));
         arianeeMessage = IArianeeMessage(address(_arianeeMessage));
         arianeeUpdate = IArianeeUpdate(address(_arianeeUpdate));
+        rewardsHistory = IRewardsHistory(address(_rewardsHistory));
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
         creditPricesUSD[1] = _creditPricesUSD1;
@@ -274,7 +274,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
 
         uint256 _reward = _spendCreditFunction(0, 1, _msgSender());
         _dispatchRewardsAtHydrate(_providerBrand, _reward);
-        rewards[_tokenId] = _reward;
+        rewardsHistory.setTokenRewards(_tokenId, _reward);
 
         nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _msgSender());
         tokenToNmpProvider[_tokenId] = _providerBrand;
@@ -568,7 +568,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      */
     function dispatchRewardsAtFirstTransfer(uint256 _tokenId, address _newOwner) external onlySmartAsset {
         // The responsability of checking if first transfer rewards are already dispatched is on the ArianeeSmartAsset contract.
-        uint256 _reward = rewards[_tokenId];
+        uint256 _reward = rewardsHistory.getTokenReward(_tokenId);
 
         address _nmpProvider = tokenToNmpProvider[_tokenId];
         address _walletProvider = tokenToWalletProvider[_tokenId];
@@ -577,7 +577,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
             _walletProvider = _nmpProvider;
         }
 
-        rewards[_tokenId] = 0;
+        rewardsHistory.resetTokenReward(_tokenId);
 
         acceptedToken.transfer(_walletProvider, (_reward / 100) * dispatchPercent[2]);
         acceptedToken.transfer(_newOwner, (_reward / 100) * dispatchPercent[4]);
