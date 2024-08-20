@@ -11,7 +11,7 @@ import "../Interfaces/IArianeeCreditHistory.sol";
 import "../Interfaces/IArianeeEvent.sol";
 import "../Interfaces/IArianeeMessage.sol";
 import "../Interfaces/IArianeeUpdate.sol";
-import "../Interfaces/IRewardsHistory.sol";
+import "../Interfaces/IArianeeRewardsHistory.sol";
 
 /// @title Contract managing the Arianee economy.
 contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
@@ -24,7 +24,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     IArianeeEvent public arianeeEvent;
     IArianeeMessage public arianeeMessage;
     IArianeeUpdate public arianeeUpdate;
-    IRewardsHistory public rewardsHistory;
+    IArianeeRewardsHistory public rewardsHistory;
 
     function _msgSender() internal override(Context, ERC2771Recipient) view returns (address ret) {
         return ERC2771Recipient._msgSender();
@@ -131,11 +131,11 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     constructor(
         IERC20 _acceptedToken,
         IArianeeSmartAsset _nonFungibleRegistry,
-        address _creditHistoryAddress,
+        address _creditHistory,
+        address _rewardsHistory,
         address _arianeeEvent,
         address _arianeeMessage,
         address _arianeeUpdate,
-        address _rewardsHistory,
         uint256 _ariaUSDExchange,
         uint256 _creditPricesUSD0,
         uint256 _creditPricesUSD1,
@@ -145,11 +145,12 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     ) {
         acceptedToken = IERC20(address(_acceptedToken));
         nonFungibleRegistry = IArianeeSmartAsset(address(_nonFungibleRegistry));
-        creditHistory = IArianeeCreditHistory(address(_creditHistoryAddress));
+        creditHistory = IArianeeCreditHistory(address(_creditHistory));
+        rewardsHistory = IArianeeRewardsHistory(address(_rewardsHistory));
         arianeeEvent = IArianeeEvent(address(_arianeeEvent));
         arianeeMessage = IArianeeMessage(address(_arianeeMessage));
         arianeeUpdate = IArianeeUpdate(address(_arianeeUpdate));
-        rewardsHistory = IRewardsHistory(address(_rewardsHistory));
+
         ariaUSDExchange = _ariaUSDExchange;
         creditPricesUSD[0] = _creditPricesUSD0;
         creditPricesUSD[1] = _creditPricesUSD1;

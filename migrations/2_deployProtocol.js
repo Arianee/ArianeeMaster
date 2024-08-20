@@ -3,14 +3,15 @@ const { GsnTestEnvironment } = require("@opengsn/dev");
 const ArianeeSmartAsset = artifacts.require("ArianeeSmartAsset");
 const ArianeeStore = artifacts.require("ArianeeStore");
 const Aria = artifacts.require("Aria");
-const Whitelist = artifacts.require("ArianeeWhitelist");
-const CreditHistory = artifacts.require("ArianeeCreditHistory");
+const ArianeeWhitelist = artifacts.require("ArianeeWhitelist");
+const ArianeeCreditHistory = artifacts.require("ArianeeCreditHistory");
 const ArianeeEvent = artifacts.require("ArianeeEvent");
 const ArianeeIdentity = artifacts.require("ArianeeIdentity");
 const ArianeeLost = artifacts.require("ArianeeLost");
 const ArianeeMessage = artifacts.require("ArianeeMessage");
 const ArianeeUpdate = artifacts.require("ArianeeUpdate");
 const ArianeeUserAction = artifacts.require("ArianeeUserAction");
+const ArianeeRewardsHistory = artifacts.require("ArianeeRewardsHistory");
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
@@ -39,10 +40,10 @@ async function deployProtocol(deployer, network, accounts) {
   const lostManager = accounts[0];
 
   // need to deploy as blank, otherwise it is not working with ganache cli
-  await deployer.deploy(Aria);
+  // await deployer.deploy(Aria);
 
   const ariaInstance = await deployer.deploy(Aria);
-  const whiteListInstance = await deployer.deploy(Whitelist, forwarderAddress);
+  const whiteListInstance = await deployer.deploy(ArianeeWhitelist, forwarderAddress);
   const arianeeSmartAssetInstance = await deployer.deploy(
     ArianeeSmartAsset,
     whiteListInstance.address,
@@ -55,7 +56,8 @@ async function deployProtocol(deployer, network, accounts) {
     arianeeSmartAssetInstance.address,
     forwarderAddress
   );
-  const creditHistoryInstance = await deployer.deploy(CreditHistory, forwarderAddress);
+  const creditHistoryInstance = await deployer.deploy(ArianeeCreditHistory, forwarderAddress);
+  const rewardsHistoryInstance = await deployer.deploy(ArianeeRewardsHistory, forwarderAddress);
   const arianeeEventInstance = await deployer.deploy(
     ArianeeEvent,
     arianeeSmartAssetInstance.address,
@@ -85,6 +87,7 @@ async function deployProtocol(deployer, network, accounts) {
     ariaInstance.address,
     arianeeSmartAssetInstance.address,
     creditHistoryInstance.address,
+    rewardsHistoryInstance.address,
     arianeeEventInstance.address,
     messageInstance.address,
     arianeeUpdate.address,
@@ -126,10 +129,13 @@ async function deployProtocol(deployer, network, accounts) {
 
   await messageInstance.setStoreAddress(arianeeStoreInstance.address);
 
+  await rewardsHistoryInstance.setStoreAddress(arianeeStoreInstance.address);
+
   const result = {
     contractAdresses: {
       aria: ariaInstance.address,
       creditHistory: creditHistoryInstance.address,
+      rewardsHistory: rewardsHistoryInstance.address,
       eventArianee: arianeeEventInstance.address,
       identity: identityInstance.address,
       smartAsset: arianeeSmartAssetInstance.address,

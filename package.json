@@ -25,13 +25,13 @@
     "@openzeppelin/contracts": "^4.8.3",
     "big-number": "^2.0.0",
     "circomlibjs": "0.1.7",
-    "ethers": "6.7.0",
-    "truffle-hdwallet-provider": "^1.0.10"
+    "ethers": "6.7.0"
   },
   "devDependencies": {
     "@arianee/arianeejs": "0.31.0",
     "@opengsn/cli": "3.0.0-beta.6",
     "@opengsn/dev": "3.0.0-beta.6",
+    "@truffle/hdwallet-provider": "^2.1.15",
     "async": "^2.6.4",
     "axios": "^0.21.2",
     "eslint": "^5.16.0",
