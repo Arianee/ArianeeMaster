@@ -42,32 +42,22 @@ async function deployProtocol(deployer, network, accounts) {
   // need to deploy as blank, otherwise it is not working with ganache cli
   // await deployer.deploy(Aria);
 
-  // const ariaInstance = await deployer.deploy(Aria);
-  const ariaInstance = await Aria.at('0x757494946FD1A932aFDD3b04D791DA2a8071b4ad');
-  // const whiteListInstance = await deployer.deploy(ArianeeWhitelist, forwarderAddress);
-  const whiteListInstance = await ArianeeWhitelist.at('0xD65Cf97df953cFec5BE0b4659a098260B909F55E');
-  console.log("whiteListInstance", whiteListInstance.address);
-  console.log("ariaInstance", ariaInstance.address);
-  // const arianeeSmartAssetInstance = await deployer.deploy(
-  //   ArianeeSmartAsset,
-  //   whiteListInstance.address,
-  //   forwarderAddress,
-  //   SMART_ASSET_IS_SOULBOUND
-  // );
-  const arianeeSmartAssetInstance = await ArianeeSmartAsset.at('0x17e631ED032eCE7c2811B6972527767E1148CcFe');
-  console.log("arianeeSmartAssetInstance", arianeeSmartAssetInstance.address);
-  // const messageInstance = await deployer.deploy(
-  //   ArianeeMessage,
-  //   whiteListInstance.address,
-  //   arianeeSmartAssetInstance.address,
-  //   forwarderAddress
-  // );
-  const messageInstance = await ArianeeMessage.at('0x9Dbcf2De1b15DA2981E726f3D6143d9b84E6dFC9');
-  console.log("messageInstance", messageInstance.address);
-  // const creditHistoryInstance = await deployer.deploy(ArianeeCreditHistory, forwarderAddress);
-  const creditHistoryInstance = await ArianeeCreditHistory.at('0x3F4B61a8B06f385826Fbe9890a08bcE22125AeB6');
-  // const rewardsHistoryInstance = await deployer.deploy(ArianeeRewardsHistory, forwarderAddress);
-  const rewardsHistoryInstance = await ArianeeRewardsHistory.at('0xa6167068F2253820Fbbb44d94403d2446F3E505C');
+  const ariaInstance = await deployer.deploy(Aria);
+  const whiteListInstance = await deployer.deploy(ArianeeWhitelist, forwarderAddress);
+  const arianeeSmartAssetInstance = await deployer.deploy(
+    ArianeeSmartAsset,
+    whiteListInstance.address,
+    forwarderAddress,
+    SMART_ASSET_IS_SOULBOUND
+  );
+  const messageInstance = await deployer.deploy(
+    ArianeeMessage,
+    whiteListInstance.address,
+    arianeeSmartAssetInstance.address,
+    forwarderAddress
+  );
+  const creditHistoryInstance = await deployer.deploy(ArianeeCreditHistory, forwarderAddress);
+  const rewardsHistoryInstance = await deployer.deploy(ArianeeRewardsHistory, forwarderAddress);
   const arianeeEventInstance = await deployer.deploy(
     ArianeeEvent,
     arianeeSmartAssetInstance.address,
@@ -138,6 +128,8 @@ async function deployProtocol(deployer, network, accounts) {
   await creditHistoryInstance.transferOwnership(ownerAddress);
 
   await messageInstance.setStoreAddress(arianeeStoreInstance.address);
+
+  await rewardsHistoryInstance.setStoreAddress(arianeeStoreInstance.address);
 
   const result = {
     contractAdresses: {
