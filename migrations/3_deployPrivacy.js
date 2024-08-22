@@ -1,4 +1,5 @@
 const { GsnTestEnvironment } = require("@opengsn/dev");
+const { Wallet } = require("ethers");
 
 const ArianeeIssuerProxy = artifacts.require("ArianeeIssuerProxy");
 const OwnershipVerifier = artifacts.require("OwnershipVerifier");
@@ -17,11 +18,11 @@ const ArianeeEvent = artifacts.require("ArianeeEvent");
 const Aria = artifacts.require("Aria");
 const ArianeeLost = artifacts.require("ArianeeLost");
 
-const STORE_ADDR = "0x0000000000000000000000000000000000000001";
-const SMART_ASSET_ADDR = "0x0000000000000000000000000000000000000001";
-const EVENT_ADDR = "0x0000000000000000000000000000000000000001";
-const ARIA_ADDR = "0x0000000000000000000000000000000000000001";
-const LOST_ADDR = "0x0000000000000000000000000000000000000001";
+const STORE_ADDR = "0x0000000000000000000000000000000000000000";
+const SMART_ASSET_ADDR = "0x0000000000000000000000000000000000000000";
+const EVENT_ADDR = "0x0000000000000000000000000000000000000000";
+const ARIA_ADDR = "0x0000000000000000000000000000000000000000";
+const LOST_ADDR = "0x0000000000000000000000000000000000000000";
 
 const MERKLE_TREE_HEIGHT = 30;
 
@@ -40,52 +41,52 @@ async function deployPrivacy(deployer, network, accounts) {
   }
   console.log("[DeployPrivacy] Forwarder address: ", forwarderAddress);
 
-  const arianeeStore = await ArianeeStore.deployed();
-  let arianeeStoreAddr = null;
-  if (!arianeeStore || !arianeeStore.address) {
-    console.warn(`WARNING: ArianeeStore deployment not found, using declared address ${STORE_ADDR}`);
-    arianeeStoreAddr = STORE_ADDR;
-  } else {
-    arianeeStoreAddr = arianeeStore.address;
+  let arianeeStoreAddr = STORE_ADDR;
+  if (!arianeeStoreAddr || arianeeStoreAddr === ZERO_ADDR) {
+    console.warn(`WARNING: ArianeeStore declared address not found, using ``Contract.deployed()`` instead`);
+    arianeeStoreAddr = (await ArianeeStore.deployed()).address;
   }
-  const arianeeSmartAsset = await ArianeeSmartAsset.deployed();
-  let arianeeSmartAssetAddr = null;
-  if (!arianeeSmartAsset || !arianeeSmartAsset.address) {
-    console.warn(`WARNING: ArianeeSmartAsset deployment not found, using declared address ${SMART_ASSET_ADDR}`);
-    arianeeSmartAssetAddr = SMART_ASSET_ADDR;
-  } else {
-    arianeeSmartAssetAddr = arianeeSmartAsset.address;
+
+  let arianeeSmartAssetAddr = SMART_ASSET_ADDR;
+  if (!arianeeSmartAssetAddr || arianeeSmartAssetAddr === ZERO_ADDR) {
+    console.warn(`WARNING: ArianeeSmartAsset declared address not found, using ``Contract.deployed()`` instead`);
+    arianeeSmartAssetAddr = (await ArianeeSmartAsset.deployed()).address;
   }
-  const arianeeEvent = await ArianeeEvent.deployed();
-  let arianeeEventAddr = null;
-  if (!arianeeEvent || !arianeeEvent.address) {
-    console.warn(`WARNING: ArianeeEvent deployment not found, using declared address ${EVENT_ADDR}`);
-    arianeeEventAddr = EVENT_ADDR;
-  } else {
-    arianeeEventAddr = arianeeEvent.address;
+
+  let arianeeEventAddr = EVENT_ADDR;
+  if (!arianeeEventAddr || arianeeEventAddr === ZERO_ADDR) {
+    console.warn(`WARNING: ArianeeEvent declared address not found, using ``Contract.deployed()`` instead`);
+    arianeeEventAddr = (await ArianeeEvent.deployed()).address;
   }
-  const aria = await Aria.deployed();
-  let ariaAddr = null;
-  if (!aria || !aria.address) {
-    console.warn(`WARNING: Aria deployment not found, using declared address ${ARIA_ADDR}`);
-    ariaAddr = ARIA_ADDR;
-  } else {
-    ariaAddr = aria.address;
+
+  let ariaAddr = ARIA_ADDR;
+  if (!ariaAddr || ariaAddr === ZERO_ADDR) {
+    console.warn(`WARNING: Aria declared address not found, using ``Contract.deployed()`` instead`);
+    ariaAddr = (await Aria.deployed()).address;
   }
-  const arianeeLost = await ArianeeLost.deployed();
-  let arianeeLostAddr = null;
-  if (!arianeeLost || !arianeeLost.address) {
-    console.warn(`WARNING: ArianeeLost deployment not found, using declared address ${LOST_ADDR}`);
-    arianeeLostAddr = LOST_ADDR;
-  } else {
-    arianeeLostAddr = arianeeLost.address;
+
+  let arianeeLostAddr = LOST_ADDR;
+  if (!arianeeLostAddr || arianeeLostAddr === ZERO_ADDR) {
+    console.warn(`WARNING: ArianeeLost declared address not found, using ``Contract.deployed()`` instead`);
+    arianeeLostAddr = (await ArianeeLost.deployed()).address;
   }
 
   // Can't find how to deploy bytecode using truffle, so we'll use ethers instead
-  const host = deployer.provider.host;
+  let host = deployer.provider.host;
+  if (!host) {
+    const providers = deployer.networks[network].provider().engine._providers;
+    for (let i = 0; i < providers.length; i++) {
+      if (providers[i].rpcUrl) {
+        host = providers[i].rpcUrl;
+        break;
+      }
+    }
+  }
+
   const deployerAddress = accounts[0];
   const provider = new JsonRpcProvider(host);
   const signer = await provider.getSigner(deployerAddress);
+  // const signer = new Wallet('0x123', provider);
 
   const HasherFactory = new ContractFactory(HasherAbi, HasherBytecode, signer);
   const hasher = await HasherFactory.deploy();
@@ -118,9 +119,9 @@ async function deployPrivacy(deployer, network, accounts) {
       hasher: hasherAddr,
       creditRegister: creditRegister.address,
       creditVerifier: creditVerifier.address,
-      arianeeCreditNotePool: arianeeCreditNotePool.address,
+      creditNotePool: arianeeCreditNotePool.address,
       ownershipVerifier: ownershipVerifier.address,
-      arianeeIssuerProxy: arianeeIssuerProxy.address,
+      issuerProxy: arianeeIssuerProxy.address,
     }
   };
 
