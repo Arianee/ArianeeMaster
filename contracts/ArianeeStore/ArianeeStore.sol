@@ -84,16 +84,6 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     mapping (address=>bool) public allowedBuyer;
 
     /**
-     * @dev Mapping from token id to the address of the NMP provider.
-     */
-    mapping (uint256 => address) tokenToNmpProvider;
-    /**
-     * @dev Mapping from token id to the address of the wallet provider.
-     */
-    mapping (uint256 => address) tokenToWalletProvider;
-
-    
-    /**
      * @dev This emits when a new address is set.
      */
     event SetAddress(string _addressType, address _newAddress);
@@ -278,7 +268,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         rewardsHistory.setTokenRewards(_tokenId, _reward);
 
         nonFungibleRegistry.hydrateToken(_tokenId, _imprint, _uri, _encryptedInitialKey, _tokenRecoveryTimestamp, _initialKeyIsRequestKey, _msgSender());
-        tokenToNmpProvider[_tokenId] = _providerBrand;
+        rewardsHistory.setTokenNmpProvider(_tokenId, _providerBrand);
     }
 
     /**
@@ -297,7 +287,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     )
         external whenNotPaused()
     {
-        tokenToWalletProvider[_tokenId] = _providerOwner;
+        rewardsHistory.setTokenWalletProvider(_tokenId, _providerOwner);
         nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _msgSender(), _signature);
     }
 
@@ -319,7 +309,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
     )
     external whenNotPaused()
     {
-      tokenToWalletProvider[_tokenId] = _providerOwner;
+      rewardsHistory.setTokenWalletProvider(_tokenId, _providerOwner);
       nonFungibleRegistry.requestToken(_tokenId, _hash, _keepRequestToken, _newOwner, _signature);
     }
 
@@ -571,11 +561,17 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         // The responsability of checking if first transfer rewards are already dispatched is on the ArianeeSmartAsset contract.
         uint256 _reward = rewardsHistory.getTokenReward(_tokenId);
 
-        address _nmpProvider = tokenToNmpProvider[_tokenId];
-        address _walletProvider = tokenToWalletProvider[_tokenId];
+        
+        address _nmpProvider = rewardsHistory.getTokenNmpProvider(_tokenId);
+        address _walletProvider = rewardsHistory.getTokenWalletProvider(_tokenId);
         // If there is not wallet provider set, we give the rewards to the NMP provider.
         if (_walletProvider == address(0)) {
-            _walletProvider = _nmpProvider;
+            if (_nmpProvider != address(0)) {
+                _walletProvider = _nmpProvider;
+            } else {
+                // If there is no NMP Provider set, we give the rewards to the protocol infrastructure.
+                _walletProvider = protocolInfraAddress;
+            }
         }
 
         rewardsHistory.resetTokenReward(_tokenId);
