@@ -43,31 +43,31 @@ async function deployPrivacy(deployer, network, accounts) {
 
   let arianeeStoreAddr = STORE_ADDR;
   if (!arianeeStoreAddr || arianeeStoreAddr === ZERO_ADDR) {
-    console.warn(`WARNING: ArianeeStore declared address not found, using ``Contract.deployed()`` instead`);
+    console.warn(`WARNING: ArianeeStore declared address not found, using Contract.deployed() instead`);
     arianeeStoreAddr = (await ArianeeStore.deployed()).address;
   }
 
   let arianeeSmartAssetAddr = SMART_ASSET_ADDR;
   if (!arianeeSmartAssetAddr || arianeeSmartAssetAddr === ZERO_ADDR) {
-    console.warn(`WARNING: ArianeeSmartAsset declared address not found, using ``Contract.deployed()`` instead`);
+    console.warn(`WARNING: ArianeeSmartAsset declared address not found, using Contract.deployed() instead`);
     arianeeSmartAssetAddr = (await ArianeeSmartAsset.deployed()).address;
   }
 
   let arianeeEventAddr = EVENT_ADDR;
   if (!arianeeEventAddr || arianeeEventAddr === ZERO_ADDR) {
-    console.warn(`WARNING: ArianeeEvent declared address not found, using ``Contract.deployed()`` instead`);
+    console.warn(`WARNING: ArianeeEvent declared address not found, using Contract.deployed() instead`);
     arianeeEventAddr = (await ArianeeEvent.deployed()).address;
   }
 
   let ariaAddr = ARIA_ADDR;
   if (!ariaAddr || ariaAddr === ZERO_ADDR) {
-    console.warn(`WARNING: Aria declared address not found, using ``Contract.deployed()`` instead`);
+    console.warn(`WARNING: Aria declared address not found, using Contract.deployed() instead`);
     ariaAddr = (await Aria.deployed()).address;
   }
 
   let arianeeLostAddr = LOST_ADDR;
   if (!arianeeLostAddr || arianeeLostAddr === ZERO_ADDR) {
-    console.warn(`WARNING: ArianeeLost declared address not found, using ``Contract.deployed()`` instead`);
+    console.warn(`WARNING: ArianeeLost declared address not found, using Contract.deployed() instead`);
     arianeeLostAddr = (await ArianeeLost.deployed()).address;
   }
 
