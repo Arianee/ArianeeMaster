@@ -109,7 +109,7 @@ async function deployPrivacy(deployer, network, accounts) {
   const creditRegister = await deployer.deploy(CreditRegister);
   const creditVerifier = await deployer.deploy(CreditVerifier);
 
-  const arianeeCreditNotePool = await deployer.deploy(ArianeeCreditNotePool, arianeeIssuerProxy.address, ariaAddr, arianeeStoreAddr, creditRegister.address, creditVerifier.address, MERKLE_TREE_HEIGHT, hasherAddr, poseidonAddr, forwarderAddress);
+  const arianeeCreditNotePool = await deployer.deploy(ArianeeCreditNotePool, arianeeIssuerProxy.address, ariaAddr, creditRegister.address, creditVerifier.address, MERKLE_TREE_HEIGHT, hasherAddr, poseidonAddr, forwarderAddress);
 
   // Registering the first `ArianeeCreditNotePool` on the `ArianeeIssuerProxy`
   await arianeeIssuerProxy.addCreditNotePool(arianeeCreditNotePool.address);

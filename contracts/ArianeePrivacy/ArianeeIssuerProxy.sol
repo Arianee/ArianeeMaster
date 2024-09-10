@@ -47,9 +47,9 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   uint256 public constant CREDIT_NOTE_PROOF_SIZE = 384;
 
   /**
-   * @notice The ArianeeStore contract used to pass issuer intents
+   * @notice The ArianeeStore contract used to pass issuer intents (can be updated)
    */
-  IArianeeStore public immutable store;
+  IArianeeStore public store;
   /**
    * @notice The ArianeeSmartAsset contract used to pass issuer intents
    */
@@ -118,6 +118,11 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
    */
   event TokenCommitmentUnregistered(uint256 indexed commitmentHash, uint256 indexed tokenId);
 
+  /**
+   * @notice Emitted when the store address is updated
+   */
+  event StoreUpdated(address oldStore, address newStore);
+
   constructor(
     address _store,
     address _smartAsset,
@@ -128,8 +133,8 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     address _trustedForwarder
   ) {
     _setTrustedForwarder(_trustedForwarder);
+    _setStoreAddress(_store);
 
-    store = IArianeeStore(_store);
     smartAsset = IArianeeSmartAsset(_smartAsset);
     arianeeEvent = IArianeeEvent(_arianeeEvent);
     arianeeLost = IArianeeLost(_arianeeLost);
@@ -470,6 +475,22 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     for (uint256 i = 0; i < _tokenIds.length; i++) {
       updateCommitment(_ownershipProofs[i], _tokenIds[i], _newCommitmentHashes[i]);
     }
+  }
+
+  // Store management
+
+  function _setStoreAddress(address _store) internal {
+    store = IArianeeStore(_store);
+  }
+
+  function setStoreAddress(address _store) external onlyOwner {
+    address oldStore = address(store);
+    _setStoreAddress(_store);
+    emit StoreUpdated(oldStore, _store);
+  }
+
+  function getStoreAddress() external view returns (address) {
+    return address(store);
   }
 
   // ERC2771Recipient
