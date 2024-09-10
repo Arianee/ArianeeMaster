@@ -7,3 +7,5 @@ truffle.js
 truffle-config.js
 contracts/*/artifacts
 soljson*
+compiler_config.json
+remix-compiler.config.js

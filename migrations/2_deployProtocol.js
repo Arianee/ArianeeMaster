@@ -40,7 +40,7 @@ async function deployProtocol(deployer, network, accounts) {
   const lostManager = accounts[0];
 
   // need to deploy as blank, otherwise it is not working with ganache cli
-  // await deployer.deploy(Aria);
+  await deployer.deploy(Aria);
 
   const ariaInstance = await deployer.deploy(Aria);
   const whiteListInstance = await deployer.deploy(ArianeeWhitelist, forwarderAddress);
