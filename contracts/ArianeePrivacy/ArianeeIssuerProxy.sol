@@ -212,14 +212,26 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     emit CreditNotePoolAdded(_creditNotePool);
   }
 
-  function addCreditFreeSender(address _sender) external onlyOwner {
+  function addCreditFreeSender(address _sender) public onlyOwner {
     creditFreeSenders[_sender] = true;
     emit CreditFreeSenderAdded(_sender);
   }
 
-  function removeCreditFreeSender(address _sender) external onlyOwner {
+  function addCreditFreeSenderBatch(address[] calldata _senders) external onlyOwner {
+    for (uint256 i = 0; i < _senders.length; i++) {
+      addCreditFreeSender(_senders[i]);
+    }
+  }
+
+  function removeCreditFreeSender(address _sender) public onlyOwner {
     delete creditFreeSenders[_sender];
     emit CreditFreeSenderRemoved(_sender);
+  }
+
+  function removeCreditFreeSenderBatch(address[] calldata _senders) external onlyOwner {
+    for (uint256 i = 0; i < _senders.length; i++) {
+      removeCreditFreeSender(_senders[i]);
+    }
   }
 
   // IArianeeStore (IArianeeSmartAsset related functions)
