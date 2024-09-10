@@ -14,6 +14,10 @@ import '../Interfaces/IArianeeSmartAsset.sol';
 import '../Interfaces/IArianeeEvent.sol';
 import '../Interfaces/IPoseidon.sol';
 
+interface IArianeeIssuerProxy {
+    function getStoreAddress() external view returns (address);
+}
+
 interface ICreditRegister {
     function verifyProof(
         uint[2] calldata _pA,
@@ -71,11 +75,6 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     IERC20 public immutable token;
 
     /**
-     * @notice The ArianeeStore contract used to purchase credits
-     */
-    IArianeeStore public immutable store;
-
-    /**
      * @notice The contract used to verify the `creditRegister` proofs
      */
     ICreditRegister public immutable creditRegister;
@@ -111,7 +110,6 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     constructor(
         address _issuerProxy,
         address _token,
-        address _store,
         address _creditRegister,
         address _creditVerifier,
         uint32 _merkleTreeHeight,
@@ -123,7 +121,6 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
         issuerProxy = _issuerProxy;
         token = IERC20(_token);
-        store = IArianeeStore(_store);
         creditRegister = ICreditRegister(_creditRegister);
         creditVerifier = ICreditVerifier(_creditVerifier);
         poseidon = IPoseidon(_poseidon);
@@ -155,6 +152,9 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
         uint32 insertedIndex = _insert(_commitmentHash);
         commitmentHashes[_commitmentHash] = true;
+
+        // Retrieve the store from the issuer proxy
+        IArianeeStore store = getStore();
 
         uint256 creditPrice = store.getCreditPrice(_creditType);
 
@@ -213,7 +213,11 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         emit Spent(_creditType, pNullifierHash, block.timestamp);
     }
 
-    function _verifyProof(CreditNoteProof calldata _creditNoteProof, bytes calldata _intentMsgData, uint256 _creditType) internal view {
+    function _verifyProof(
+        CreditNoteProof calldata _creditNoteProof,
+        bytes calldata _intentMsgData,
+        uint256 _creditType
+    ) internal view {
         bytes32 pRoot = bytes32(_creditNoteProof._pubSignals[0]);
         require(isKnownRoot(pRoot), 'ArianeeCreditNotePool: Cannot find your merkle root'); // Make sure to use a recent one
 
@@ -229,11 +233,24 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
         uint256 pIntentHash = _creditNoteProof._pubSignals[3];
 
         // Removing the `OwnershipProof` (352 bytes) and the `CreditNoteProof` (384 bytes) from the msg.data before computing the hash to compare
-        uint256 msgDataHash = uint256(poseidon.poseidon([keccak256(abi.encodePacked(bytes.concat(_intentMsgData.slice(0, SELECTOR_SIZE), _intentMsgData.slice(SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + CREDIT_NOTE_PROOF_SIZE, _intentMsgData.length))))]));
-        require(
-            pIntentHash == msgDataHash,
-            'ArianeeCreditNotePool: Proof intent does not match the function call'
+        uint256 msgDataHash = uint256(
+            poseidon.poseidon(
+                [
+                    keccak256(
+                        abi.encodePacked(
+                            bytes.concat(
+                                _intentMsgData.slice(0, SELECTOR_SIZE),
+                                _intentMsgData.slice(
+                                    SELECTOR_SIZE + OWNERSHIP_PROOF_SIZE + CREDIT_NOTE_PROOF_SIZE,
+                                    _intentMsgData.length
+                                )
+                            )
+                        )
+                    )
+                ]
+            )
         );
+        require(pIntentHash == msgDataHash, 'ArianeeCreditNotePool: Proof intent does not match the function call');
 
         require(
             creditVerifier.verifyProof(
@@ -256,5 +273,11 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
 
     function isSpent(bytes32 _nullifierHash) external view returns (bool) {
         return nullifierHashes[_nullifierHash];
+    }
+
+    // Store management
+
+    function getStore() internal view returns (IArianeeStore) {
+        return IArianeeStore(IArianeeIssuerProxy(issuerProxy).getStoreAddress());
     }
 }
