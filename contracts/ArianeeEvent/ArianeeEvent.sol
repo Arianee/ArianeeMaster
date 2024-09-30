@@ -17,6 +17,7 @@ contract ArianeeEvent is Ownable, Pausable, ERC2771Recipient {
     /// Event ID per token
     mapping(uint256 => uint256[]) public tokenEventsList;
 
+    // tokenId to event index 
     mapping(uint256 => uint256) public idToTokenEventIndex;
 
     /// Mapping from tokenid to pending events
@@ -132,9 +133,10 @@ contract ArianeeEvent is Ownable, Pausable, ERC2771Recipient {
      * @param _eventId id of the service.
      */
     function accept(uint256 _eventId, address _sender) external onlyStore() canOperate(_eventId, _sender) whenNotPaused() returns(uint256){
-        require(idToPendingEvents[_eventId] != 0 || pendingEvents[eventIdToToken[_eventId]].length > 0, "Event already accepted or not pending");
 
         uint256 _tokenId = eventIdToToken[_eventId];
+        
+        require(pendingEvents[_tokenId][idToPendingEvents[_eventId]] == _eventId, "Event is not pending");
         uint256 pendingEventToRemoveIndex = idToPendingEvents[_eventId];
         uint256 lastPendingIndex = pendingEvents[_tokenId].length - 1;
 

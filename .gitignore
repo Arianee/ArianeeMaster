@@ -10,3 +10,4 @@ soljson*
 compiler_config.json
 remix-compiler.config.js
 .deploys/
+.history
