@@ -101,11 +101,11 @@ contract ArianeeCreditNotePool is ReentrancyGuard, MerkleTreeWithHistory, ERC277
     /**
      * @notice Emitted when a credit note is purchased
      */
-    event Purchased(uint256 creditType, bytes32 commitmentHash, uint32 indexed leafIndex, uint256 timestamp);
+    event Purchased(uint256 _creditType, bytes32 _commitmentHash, uint32 indexed _leafIndex, uint256 _timestamp);
     /**
      * @notice Emitted when a credit note is spent
      */
-    event Spent(uint256 creditType, bytes32 nullifierHash, uint256 timestamp);
+    event Spent(uint256 _creditType, bytes32 _nullifierHash, uint256 _timestamp);
 
     constructor(
         address _issuerProxy,
