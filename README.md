@@ -37,9 +37,9 @@ npm run gsn
 npm run test
 
 # IssuerProxy tests
-npm run test -- ./test/IssuerProxy.test.js
+npm run test -- ./test/IssuerProxy.test.js (--compile-none to skip compilation)
 # CreditNotePool tests
-npm run test -- ./test/CreditNotePool.test.js
+npm run test -- ./test/CreditNotePool.test.js (--compile-none to skip compilation)
 ```
 
 This will start the necessary services and execute the test suite, ensuring everything is functioning correctly.

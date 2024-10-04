@@ -15,7 +15,7 @@ const ArianeenCreditNotePool = artifacts.require('ArianeeCreditNotePool');
 
 const { ProtocolClientV1 } = require('@arianee/arianee-protocol-client');
 const { default: Core } = require('@arianee/core');
-const { Prover, DEFAULT_OWNERSHIP_PROOF } = require('@arianee/privacy-circuits');
+const { Prover } = require('@arianee/privacy-circuits');
 const { MaxUint256 } = require('ethers');
 const { JsonRpcProvider, ZeroAddress } = require('ethers');
 
@@ -185,6 +185,13 @@ contract('CreditNotePool', (accounts) => {
 
     const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
 
+    // Get an ownership proof
+    const { callData: ownershipProofCallData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
     // Get a credit proof
     const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
       protocolV1,
@@ -197,7 +204,7 @@ contract('CreditNotePool', (accounts) => {
     });
 
     // Reserve and hydrate the token
-    await arianeeIssuerProxyInstance.hydrateToken(DEFAULT_OWNERSHIP_PROOF, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer });
+    await arianeeIssuerProxyInstance.hydrateToken(ownershipProofCallData, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer });
 
     const tokenImprint = await arianeeSmartAssetInstance.tokenImprint(tokenId);
     assert.equal(tokenImprint, imprint);
@@ -228,6 +235,13 @@ contract('CreditNotePool', (accounts) => {
 
     const { intentHashAsStr } = await prover.issuerProxy.computeIntentHash({ protocolV1, fragment, values, needsCreditNoteProof: true });
 
+    // Get an ownership proof
+    const { callData: ownershipProofCallData } = await prover.issuerProxy.generateProof({
+      protocolV1,
+      tokenId,
+      intentHashAsStr,
+    });
+
     // Get a credit proof
     const { callData: creditProofCallData } = await prover.creditNotePool.generateProof({
       protocolV1,
@@ -243,9 +257,9 @@ contract('CreditNotePool', (accounts) => {
     const imprint = `0x${'11'.repeat(32)}`;
 
     await truffleAssert.fails(
-      arianeeIssuerProxyInstance.hydrateToken(DEFAULT_OWNERSHIP_PROOF, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer }),
+      arianeeIssuerProxyInstance.hydrateToken(ownershipProofCallData, creditProofCallData, creditNotePool, ownershipCommitmentHashAsStr, tokenId, imprint, uri, encryptedInitialKey, tokenRecoveryTimestamp, initialKeyIsRequestKey, interfaceProvider, { from: relayer }),
       truffleAssert.ErrorType.REVERT,
-      'ArianeeCreditNotePool: Proof intent does not match the function call'
+      'ArianeePrivacyProxy: Proof intent does not match the function call'
     );
   });
 
