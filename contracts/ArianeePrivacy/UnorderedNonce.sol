@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 abstract contract UnorderedNonce {
-  event UnorderedNonceInvalidation(uint256 indexed commitmentHash, uint256 word, uint256 mask);
+  event UnorderedNonceInvalidation(uint256 indexed _commitmentHash, uint256 _word, uint256 _mask);
 
   /// @notice A map from commitmentHash and a caller specified word index to a bitmap. Used to set bits in the bitmap to prevent against signature replay attacks
   /// @dev Uses unordered nonces so that permit messages do not need to be spent in a certain order

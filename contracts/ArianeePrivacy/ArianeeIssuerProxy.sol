@@ -90,38 +90,38 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   /**
    * @notice Emitted when a "credit free sender" is sending an intent
    */
-  event CreditFreeSenderLog(address indexed sender, uint256 creditType);
+  event CreditFreeSenderLog(address indexed _sender, uint256 _creditType);
   /**
    * @notice Emitted when a "credit free sender" is added
    */
-  event CreditFreeSenderAdded(address indexed sender);
+  event CreditFreeSenderAdded(address indexed _sender);
   /**
    * @notice Emitted when a "credit free sender" is removed
    */
-  event CreditFreeSenderRemoved(address indexed sender);
+  event CreditFreeSenderRemoved(address indexed _sender);
 
   /**
    * @notice Emitted when a CreditNotePool is added
    */
-  event CreditNotePoolAdded(address indexed creditNotePool);
+  event CreditNotePoolAdded(address indexed _creditNotePool);
 
   /**
    * @notice Emitted when a token commitment is registered
    */
-  event TokenCommitmentRegistered(uint256 indexed commitmentHash, uint256 indexed tokenId);
+  event TokenCommitmentRegistered(uint256 indexed _commitmentHash, uint256 indexed _tokenId);
   /**
    * @notice Emitted when a token commitment is updated
    */
-  event TokenCommitmentUpdated(uint256 indexed previousCommitmentHash, uint256 indexed newCommitmentHash, uint256 indexed tokenId);
+  event TokenCommitmentUpdated(uint256 indexed _previousCommitmentHash, uint256 indexed _newCommitmentHash, uint256 indexed _tokenId);
   /**
    * @notice Emitted when a token commitment is unregistered
    */
-  event TokenCommitmentUnregistered(uint256 indexed commitmentHash, uint256 indexed tokenId);
+  event TokenCommitmentUnregistered(uint256 indexed _commitmentHash, uint256 indexed _tokenId);
 
   /**
    * @notice Emitted when the store address is updated
    */
-  event StoreUpdated(address oldStore, address newStore);
+  event StoreUpdated(address _oldStore, address _newStore);
 
   constructor(
     address _store,
@@ -242,7 +242,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   }
 
   function hydrateToken(
-    OwnershipProof calldata _ownershipProof, // If no commitment hash is provided, this proof is required
+    OwnershipProof calldata _ownershipProof,
     CreditNoteProof calldata _creditNoteProof,
     address _creditNotePool,
     uint256 _commitmentHash, // If no proof is provided, this commitment hash is required
@@ -258,10 +258,10 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
       // If a commitment hash is provided, we try to register it before hydrating the token
       // This can happen if the token was not reserved before being hydrated
       tryRegisterCommitment(_tokenId, _commitmentHash);
-    } else {
-      // If no commitment hash is provided, the sender must have registered one before and provide an OwnershipProof
-      _verifyProof(_ownershipProof, true, _tokenId);
     }
+
+    // Proof verification is made inline here because we need to do it after the eventual commitment hash registration
+    _verifyProof(_ownershipProof, true, _tokenId);
 
     trySpendCredit(_creditNotePool, CREDIT_TYPE_CERTIFICATE, _creditNoteProof);
 
