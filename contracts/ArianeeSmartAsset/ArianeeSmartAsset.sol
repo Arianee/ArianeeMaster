@@ -287,13 +287,14 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
 
     idToApproval[_tokenId] = _msgSender();
 
-    if (_keepRequestToken) {
-      require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request token for a soulbound smart asset");
-    } else {
-      tokenAccess[_tokenId][1] = address(0);
-    }
+    address lastTransferTokenAccess = tokenAccess[_tokenId][1]; // Save last token access
 
     _transferFrom(idToOwner[_tokenId], _newOwner, _tokenId);
+
+    if (_keepRequestToken) {
+      require(isSoulbound == false, "ArianeeSmartAsset: Forbidden to keep the request token for a soulbound smart asset");
+      tokenAccess[_tokenId][1] = lastTransferTokenAccess;
+    }
   }
 
   /**
@@ -493,6 +494,8 @@ contract ArianeeSmartAsset is NFTokenMetadataEnumerable, Abilitable, Ownable, Pa
    */
   function _transferFrom(address _from, address _to, uint256 _tokenId) internal override {
     require(store.canTransfer(_from, _to, _tokenId, isSoulbound), "ArianeeSmartAsset: Transfer rejected by the store");
+
+    tokenAccess[_tokenId][1] = address(0); // reset request key after first transfer (unless asking explicitly to keep it - in requestToken function)
 
     if (isSoulbound) {
       address tokenOwner = idToOwner[_tokenId];
