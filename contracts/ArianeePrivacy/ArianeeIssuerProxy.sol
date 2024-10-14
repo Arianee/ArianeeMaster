@@ -85,7 +85,7 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
   /**
    * @notice Mapping<TokenId, CommitmentHash>
    */
-  mapping(uint256 tokenId => uint256) public commitmentHashes;
+  mapping(uint256 => uint256) public commitmentHashes;
 
   /**
    * @notice Emitted when a "credit free sender" is sending an intent
