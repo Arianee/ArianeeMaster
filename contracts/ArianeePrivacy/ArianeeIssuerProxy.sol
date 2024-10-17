@@ -388,36 +388,41 @@ contract ArianeeIssuerProxy is Ownable2Step, UnorderedNonce, ERC2771Recipient {
     trySpendCredit(_creditNotePool, CREDIT_TYPE_EVENT, _creditNoteProof);
     store.createEvent(_eventId, _tokenId, _imprint, _uri, _interfaceProvider);
   }
+  
+  function acceptEvent(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    uint256 _eventId,
+    address _interfaceProvider
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
+    store.acceptEvent(_eventId, _interfaceProvider);
+  }
 
-  function acceptEvent(OwnershipProof calldata _ownershipProof, uint256 _eventId, address _interfaceProvider) external {
-    uint256 tokenId = arianeeEvent.eventIdToToken(_eventId);
-    require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
-
-    // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, false, tokenId);
-
+  function refuseEvent(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    uint256 _eventId,
+    address _interfaceProvider
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     store.acceptEvent(_eventId, _interfaceProvider);
   }
 
   // IArianeeEvent
 
-  function destroyEvent(OwnershipProof calldata _ownershipProof, uint256 _eventId) external {
-    uint256 tokenId = arianeeEvent.eventIdToToken(_eventId);
-    require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
-
-    // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, false, tokenId);
-
+  function destroyEvent(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    uint256 _eventId
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     arianeeEvent.destroy(_eventId);
   }
 
-  function updateDestroyEventRequest(OwnershipProof calldata _ownershipProof, uint256 _eventId, bool _active) external {
-    uint256 tokenId = arianeeEvent.eventIdToToken(_eventId);
-    require(tokenId != 0, 'ArianeePrivacyProxy: Event not found');
-
-    // Proof verification is made inline here because we need to get the tokenId from the eventId first
-    _verifyProof(_ownershipProof, false, tokenId);
-
+  function updateDestroyEventRequest(
+    OwnershipProof calldata _ownershipProof,
+    uint256 _tokenId,
+    uint256 _eventId,
+    bool _active
+  ) external onlyWithProof(_ownershipProof, false, _tokenId) {
     arianeeEvent.updateDestroyRequest(_eventId, _active);
   }
 
