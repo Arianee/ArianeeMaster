@@ -11,6 +11,7 @@ const ArianeeUpdate = artifacts.require('ArianeeUpdate');
 const ArianeeUserAction = artifacts.require('ArianeeUserAction');
 const ArianeeRewardsHistory = artifacts.require('ArianeeRewardsHistory');
 
+const { expectRevert } = require('@openzeppelin/test-helpers');
 // const { GsnTestEnvironment } = require("@opengsn/dev");
 
 contract('CrossContracts', (accounts) => {
@@ -208,7 +209,7 @@ contract('CrossContracts', (accounts) => {
     await arianeeStoreInstance.buyCredit(0, 1, accounts[1], { from: accounts[1] });
     let account = web3.eth.accounts.create();
     let tokenId = 1;
-    
+
     await arianeeStoreInstance.hydrateToken(
       tokenId,
       web3.utils.keccak256('imprint'),
@@ -265,4 +266,26 @@ contract('CrossContracts', (accounts) => {
 
     assert.equal(nftBalance, 1);
   });
+
+
+  it('should let owner withdraw aria properly', async () => {
+    await ariaInstance.transfer(accounts[1], '1000000000000000000000', { from: accounts[0] });
+    await ariaInstance.approve(arianeeStoreInstance.address, '1000000000000000000000', {
+      from: accounts[1],
+    });
+    await arianeeStoreInstance.buyCredit(0, 1000, accounts[1], { from: accounts[1] });
+    const balanceBeforeWithdraw = await ariaInstance.balanceOf(accounts[0]);
+    await arianeeStoreInstance.withdrawArias('1000000000000000000000', {from:accounts[0]});
+    const balanceAfterWithdraw = await ariaInstance.balanceOf(accounts[0]);
+    const withdrawAmount = web3.utils.toBN('1000000000000000000000');
+    expect(balanceAfterWithdraw.toString()).to.equal(balanceBeforeWithdraw.add(withdrawAmount).toString());
+  });
+
+  it.only('should let only owner to withdraw aria', async () => {
+    await expectRevert(
+      arianeeStoreInstance.withdrawArias('1', { from: accounts[1] }),
+      'Ownable: caller is not the owner'
+    );
+  });
+
 });

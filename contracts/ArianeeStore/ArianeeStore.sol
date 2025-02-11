@@ -215,7 +215,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
      * @param _to receiver of the credits
      */
     function buyCredit(uint256 _creditType, uint256 _quantity, address _to) external onlyAllowedBuyer(_to) whenNotPaused() {
-        
+
         uint256 tokens = _quantity * creditPrices[_creditType];
 
         // Transfer required token quantity to buy quantity credit
@@ -359,6 +359,16 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         require(address(this) != creditHistory.arianeeStoreAddress());
         require(_msgSender() == creditHistory.arianeeStoreAddress());
         acceptedToken.transfer(address(creditHistory.arianeeStoreAddress()),acceptedToken.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Withdraw arias to the owner.
+     * @notice Can only be called by the owner.
+     * @param _balanceToWithdraw quantity of aria to withdraw.
+     */
+    function withdrawArias(uint256 _balanceToWithdraw) onlyOwner() external {
+        require(_balanceToWithdraw <= acceptedToken.balanceOf(address(this)), "You cannot withdraw more than the balance of the contract");
+        acceptedToken.transfer(owner(), _balanceToWithdraw);
     }
 
     /**
@@ -561,7 +571,7 @@ contract ArianeeStore is Ownable, Pausable, ERC2771Recipient {
         // The responsability of checking if first transfer rewards are already dispatched is on the ArianeeSmartAsset contract.
         uint256 _reward = rewardsHistory.getTokenReward(_tokenId);
 
-        
+
         address _nmpProvider = rewardsHistory.getTokenNmpProvider(_tokenId);
         address _walletProvider = rewardsHistory.getTokenWalletProvider(_tokenId);
         // If there is not wallet provider set, we give the rewards to the NMP provider.
