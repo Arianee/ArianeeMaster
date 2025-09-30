@@ -24,7 +24,7 @@
   "devDependencies": {
     "@arianee/arianeejs": "^1.117.0",
     "async": "^2.6.4",
-    "axios": "^1.8.2",
+    "axios": "^1.12.0",
     "eslint": "^9.32.0",
     "eslint-utils": ">=1.4.1",
     "lodash": ">=4.17.21",
